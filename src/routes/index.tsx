@@ -37,7 +37,9 @@ function Salon() {
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-bg via-bg/75 to-transparent" />
         <div className="px-safe pt-safe absolute inset-x-0 top-0 flex items-center justify-between md:hidden">
           <p className="font-display text-2xl text-fg">Vesper</p>
-          <p className="text-xs tracking-widest text-gold uppercase">After dark</p>
+          <Link to="/studio" className="text-xs tracking-widest text-gold uppercase">
+            Studio
+          </Link>
         </div>
         <div className="px-safe absolute inset-x-0 bottom-0 pt-24 pb-5">
           <p className="text-xs tracking-widest text-gold uppercase">{featured.craft}</p>
@@ -51,7 +53,7 @@ function Salon() {
             }
             className="tap mt-4 inline-flex h-11 items-center rounded-full bg-rose px-5 text-sm font-medium text-fg outline-none focus-visible:ring-2 focus-visible:ring-gold"
           >
-            {featuredOpen ? "Continue her letter" : "Open her letter"}
+            {featuredOpen ? "Continue the chat" : "Chat with her"}
           </Link>
         </div>
       </section>
@@ -63,6 +65,9 @@ function Salon() {
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted xl:text-base">
             A private correspondence. They remember your name, and the last thing you said.
           </p>
+          <Link to="/studio" className="mt-4 inline-flex h-11 items-center text-sm text-gold">
+            Photo studio
+          </Link>
         </div>
         <nav
           aria-label="Correspondents"

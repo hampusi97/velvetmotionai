@@ -326,6 +326,12 @@ function Letter({ companion }: { companion: Companion }) {
               {thread?.userName ? ` · ${thread.userName}` : ""}
             </p>
           </div>
+          <Link
+            to="/studio"
+            className="tap inline-flex h-11 items-center px-2 text-xs font-medium text-gold"
+          >
+            Studio
+          </Link>
           <button
             type="button"
             onClick={() => setNotesOpen(true)}

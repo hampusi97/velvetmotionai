@@ -82,6 +82,24 @@ export async function deleteMediaPrefix(prefix: string) {
   }
 }
 
+export async function listMedia(prefix: string): Promise<MediaRow[]> {
+  if (typeof indexedDB === "undefined") return [];
+  try {
+    const db = await openDb();
+    const rows = await new Promise<MediaRow[]>((resolve, reject) => {
+      const tx = db.transaction(STORE, "readonly");
+      const request = tx.objectStore(STORE).getAll();
+      request.onsuccess = () => resolve((request.result as MediaRow[]) ?? []);
+      request.onerror = () => reject(request.error);
+    });
+    return rows
+      .filter((row) => row.key.startsWith(prefix))
+      .sort((a, b) => b.savedAt - a.savedAt);
+  } catch {
+    return [];
+  }
+}
+
 export function blobFromBase64(base64: string, mime: string) {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
