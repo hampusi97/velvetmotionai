@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { VIPModal, LiveBitcoinAdSlot, BTC_PAYOUT_ADDRESS } from "../components/Monetization";
 import { ReferralModal, ReferralWelcomeBanner } from "../components/ReferralSystem";
+import { InstallAppModal } from "../components/InstallAppModal";
+import { AuthModal } from "../components/AuthModal";
 import { 
   Heart, Sparkles, Phone, PhoneOff, Gift, MessageCircle, Play, 
   Download, Wand2, RefreshCw, Zap, Volume2, ShieldCheck, 
@@ -169,10 +171,20 @@ export default function Home() {
   const [isVIP, setIsVIP] = useState(false);
   const [showVIPModal, setShowVIPModal] = useState(false);
   const [showRefModal, setShowRefModal] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
 
   // Initialize and Sync Session with Persistent Backend Database
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const savedUser = localStorage.getItem("velvet_user");
+      if (savedUser) {
+        try {
+          setCurrentUser(JSON.parse(savedUser));
+        } catch (e) {}
+      }
+
       let uid = localStorage.getItem("velvet_user_id");
       if (!uid) {
         uid = "u_" + Math.random().toString(36).substring(2, 9);
@@ -528,6 +540,28 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* 📲 Install Native App Button (iOS, Mac, Android) */}
+          <button
+            onClick={() => setShowInstallModal(true)}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 hover:border-candyPink text-xs text-zinc-300 transition-all active:scale-95"
+          >
+            <span>📲</span> Install App
+          </button>
+
+          {/* User Account / Log In Button */}
+          {currentUser ? (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-candyPink/15 border border-candyPink/40 text-candyPink text-xs font-bold">
+              👤 {currentUser.name}
+            </span>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs text-zinc-300 hover:text-white"
+            >
+              Log In
+            </button>
+          )}
+
           {/* 💸 30% Rev-Share Referral Button */}
           <button
             onClick={() => setShowRefModal(true)}
@@ -837,6 +871,12 @@ export default function Home() {
 
       {/* REFERRAL REVENUE-SHARE MODAL */}
       <ReferralModal isOpen={showRefModal} onClose={() => setShowRefModal(false)} userId={userId} />
+
+      {/* INSTALL APP MODAL */}
+      <InstallAppModal isOpen={showInstallModal} onClose={() => setShowInstallModal(false)} />
+
+      {/* USER AUTH MODAL */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} onLoginSuccess={(u) => setCurrentUser(u)} />
 
       {/* VIP CHECKOUT MODAL (CARD + BITCOIN) */}
       <VIPModal
