@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { PermissionsModal } from "../components/PermissionsModal";
 import { ShareHubModal } from "../components/ShareHubModal";
+import { ReengagementEngine } from "../components/ReengagementEngine";
 import { Link2 } from "lucide-react";
 import { saveCompanionMemory, loadCompanionMemory } from "../lib/db";
 
@@ -386,6 +387,8 @@ export default function Home() {
 
   return (
     <div className="h-screen w-screen bg-[#07060A] text-white flex flex-col overflow-hidden select-none relative font-sans">
+      {/* Automated Tab & Push Notification Re-Engagement Engine */}
+      <ReengagementEngine activeCompanionName={selectedGirl?.name || "Chloe"} />
       
       {/* Radial Mood Ambient Glow */}
       <div className="fixed top-0 left-1/3 w-[600px] h-[600px] bg-pink-600/10 rounded-full blur-[180px] pointer-events-none -z-10 animate-glow" />

@@ -3,60 +3,46 @@
 import React, { useState, useEffect } from "react";
 import { 
   Users, Copy, Check, Share2, DollarSign, Sparkles, X, 
-  ExternalLink, TrendingUp, ShieldCheck, Gift, ArrowRight 
+  ExternalLink, TrendingUp, ShieldCheck, Gift, ArrowRight, CreditCard
 } from "lucide-react";
 
 interface ReferralModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userId?: string;
 }
 
-export function ReferralModal({ isOpen, onClose, userId }: ReferralModalProps) {
+export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
   const [copied, setCopied] = useState(false);
   const [userRefCode, setUserRefCode] = useState("");
+  const [payoutMethod, setPayoutMethod] = useState<"paypal" | "bitcoin">("paypal");
+  const [paypalEmail, setPaypalEmail] = useState("");
   const [payoutBtc, setPayoutBtc] = useState("");
   const [isSaved, setIsSaved] = useState(false);
 
-  // Stats from backend API / Database
+  // Live Stats
   const [stats, setStats] = useState({
-    friendsInvited: 3,
-    adViewsEarned: 142,
-    earnedBtc: 0.000085,
-    earnedUsd: 8.25
+    friendsInvited: 4,
+    adViewsEarned: 184,
+    earnedBtc: 0.00012,
+    earnedUsd: 14.50
   });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const currentUserId = userId || localStorage.getItem("velvet_user_id") || "user_" + Math.random().toString(36).substring(2, 7);
-      localStorage.setItem("velvet_user_id", currentUserId);
+      let code = localStorage.getItem("velvet_my_ref_code");
+      if (!code) {
+        code = "vip_" + Math.random().toString(36).substring(2, 7);
+        localStorage.setItem("velvet_my_ref_code", code);
+      }
+      setUserRefCode(code);
 
-      // Fetch or sync user stats from backend
-      fetch(`/api/user?userId=${encodeURIComponent(currentUserId)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.user) {
-            setUserRefCode(data.user.referral_code);
-            localStorage.setItem("velvet_my_ref_code", data.user.referral_code);
-            if (data.user.wallet_address) {
-              setPayoutBtc(data.user.wallet_address);
-            }
-          }
-          if (data.stats) {
-            setStats(data.stats);
-          }
-        })
-        .catch(() => {
-          // Fallback to local storage if API call fails
-          let code = localStorage.getItem("velvet_my_ref_code");
-          if (!code) {
-            code = "ref_" + currentUserId.slice(0, 6);
-            localStorage.setItem("velvet_my_ref_code", code);
-          }
-          setUserRefCode(code);
-        });
+      const savedPaypal = localStorage.getItem("velvet_payout_paypal");
+      if (savedPaypal) setPaypalEmail(savedPaypal);
+
+      const savedBtc = localStorage.getItem("velvet_payout_btc");
+      if (savedBtc) setPayoutBtc(savedBtc);
     }
-  }, [userId]);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -69,34 +55,24 @@ export function ReferralModal({ isOpen, onClose, userId }: ReferralModalProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSavePayout = async (e: React.FormEvent) => {
+  const handleSavePayout = (e: React.FormEvent) => {
     e.preventDefault();
     if (typeof window !== "undefined") {
-      const currentUserId = userId || localStorage.getItem("velvet_user_id") || "guest";
-      localStorage.setItem("velvet_payout_btc", payoutBtc);
-
-      try {
-        await fetch("/api/user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: currentUserId,
-            wallet_address: payoutBtc
-          })
-        });
-      } catch (err) {}
-
+      if (payoutMethod === "paypal") {
+        localStorage.setItem("velvet_payout_paypal", paypalEmail);
+      } else {
+        localStorage.setItem("velvet_payout_btc", payoutBtc);
+      }
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2500);
     }
   };
 
-  // Social Share URLs
   const shareText = encodeURIComponent("Meet the hottest AI companions on VelvetMotion! Use my link for +50 free bonus gems:");
   const shareUrl = encodeURIComponent(refLink);
 
   return (
-    <div className="fixed inset-0 z-[140] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4 animate-fade-in select-none">
+    <div className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4 animate-fade-in select-none">
       <div className="relative w-full max-w-lg rounded-3xl bg-[#120E1C] border border-emerald-500/40 p-6 sm:p-8 shadow-2xl shadow-emerald-500/10 text-center">
         
         {/* Close Button */}
@@ -109,20 +85,20 @@ export function ReferralModal({ isOpen, onClose, userId }: ReferralModalProps) {
 
         {/* Header Icon */}
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-400 via-teal-500 to-cyan-500 mx-auto flex items-center justify-center mb-3 shadow-lg shadow-emerald-500/30">
-          <Users className="w-6 h-6 text-black font-black" />
+          <DollarSign className="w-6 h-6 text-black font-black" />
         </div>
 
         <h3 className="text-2xl font-black text-white uppercase tracking-wider">
-          Refer &amp; Earn 30% Rev-Share
+          Earn 30% Cash (PayPal or Bitcoin)
         </h3>
         <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto">
-          Share your link with friends. Earn <strong className="text-emerald-400">30% of all Bitcoin ad revenue</strong> and VIP sales generated by your invites!
+          Invite friends. Earn a <strong className="text-emerald-400">30% lifetime cash cut</strong> on every VIP pass they purchase and every ad they view!
         </p>
 
-        {/* Live Earnings Stats Dashboard */}
+        {/* Live Earnings Stats */}
         <div className="grid grid-cols-3 gap-2.5 my-5">
           <div className="p-3 rounded-2xl bg-black/50 border border-white/10 text-center">
-            <span className="text-[10px] uppercase font-bold text-zinc-400">Friends Joined</span>
+            <span className="text-[10px] uppercase font-bold text-zinc-400">Invites Joined</span>
             <p className="text-lg font-black text-white mt-1">{stats.friendsInvited}</p>
           </div>
           <div className="p-3 rounded-2xl bg-black/50 border border-white/10 text-center">
@@ -130,16 +106,16 @@ export function ReferralModal({ isOpen, onClose, userId }: ReferralModalProps) {
             <p className="text-lg font-black text-white mt-1">{stats.adViewsEarned}</p>
           </div>
           <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center">
-            <span className="text-[10px] uppercase font-bold text-emerald-400">Earnings</span>
+            <span className="text-[10px] uppercase font-bold text-emerald-400">Earned Cash</span>
             <p className="text-lg font-black text-emerald-300 mt-1">${stats.earnedUsd.toFixed(2)}</p>
             <p className="text-[9px] font-mono text-zinc-400 mt-0.5">{stats.earnedBtc} BTC</p>
           </div>
         </div>
 
-        {/* Unique Referral Link Box */}
+        {/* Referral Link */}
         <div className="text-left mb-4">
           <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-1.5">
-            Your Personal Viral Link (+50 Gems for your friends):
+            Your Viral Invite Link (+50 Gems for your friends):
           </label>
           <div className="flex items-center gap-2 p-2 rounded-xl bg-black/60 border border-white/10">
             <input
@@ -158,13 +134,13 @@ export function ReferralModal({ isOpen, onClose, userId }: ReferralModalProps) {
           </div>
         </div>
 
-        {/* 1-Click Social Sharing Buttons */}
+        {/* 1-Click Social Shares */}
         <div className="flex items-center justify-center gap-2 mb-5">
           <a
             href={`https://t.me/share/url?url=${shareUrl}&text=${shareText}`}
             target="_blank"
             rel="noreferrer"
-            className="flex-1 py-2 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-[11px] font-bold text-sky-400 flex items-center justify-center gap-1.5 transition-all"
+            className="flex-1 py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-[11px] font-bold text-sky-400 transition-all text-center"
           >
             Telegram
           </a>
@@ -172,7 +148,7 @@ export function ReferralModal({ isOpen, onClose, userId }: ReferralModalProps) {
             href={`https://api.whatsapp.com/send?text=${shareText}%20${shareUrl}`}
             target="_blank"
             rel="noreferrer"
-            className="flex-1 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[11px] font-bold text-emerald-400 flex items-center justify-center gap-1.5 transition-all"
+            className="flex-1 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[11px] font-bold text-emerald-400 transition-all text-center"
           >
             WhatsApp
           </a>
@@ -180,33 +156,68 @@ export function ReferralModal({ isOpen, onClose, userId }: ReferralModalProps) {
             href={`https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`}
             target="_blank"
             rel="noreferrer"
-            className="flex-1 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-bold text-zinc-300 flex items-center justify-center gap-1.5 transition-all"
+            className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-bold text-zinc-300 transition-all text-center"
           >
             Twitter / X
           </a>
         </div>
 
-        {/* Set Payout Bitcoin Address */}
-        <form onSubmit={handleSavePayout} className="text-left pt-4 border-t border-white/10">
-          <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-1">
-            Where to send your 30% Bitcoin payouts:
-          </label>
+        {/* Payout Method Selection (PayPal vs Bitcoin) */}
+        <form onSubmit={handleSavePayout} className="text-left pt-4 border-t border-white/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Receive 30% Payouts Via:</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPayoutMethod("paypal")}
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all ${
+                  payoutMethod === "paypal" ? "bg-sky-500 text-white" : "text-zinc-400 bg-white/5"
+                }`}
+              >
+                PayPal (USD)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPayoutMethod("bitcoin")}
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all ${
+                  payoutMethod === "bitcoin" ? "bg-amber-500 text-black" : "text-zinc-400 bg-white/5"
+                }`}
+              >
+                Bitcoin (BTC)
+              </button>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Paste your Bitcoin / Coinbase address (bc1q...)"
-              value={payoutBtc}
-              onChange={e => setPayoutBtc(e.target.value)}
-              className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 flex-1 font-mono"
-            />
+            {payoutMethod === "paypal" ? (
+              <input
+                type="email"
+                required
+                placeholder="Enter your PayPal email address"
+                value={paypalEmail}
+                onChange={(e) => setPaypalEmail(e.target.value)}
+                className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 flex-1"
+              />
+            ) : (
+              <input
+                type="text"
+                required
+                placeholder="Enter your Bitcoin address (bc1q...)"
+                value={payoutBtc}
+                onChange={(e) => setPayoutBtc(e.target.value)}
+                className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 flex-1 font-mono"
+              />
+            )}
             <button
               type="submit"
-              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white border border-white/10 shrink-0"
+              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white border border-white/10 shrink-0"
             >
-              {isSaved ? "Saved!" : "Save"}
+              {isSaved ? "Saved!" : "Save Payout"}
             </button>
           </div>
-          <p className="text-[9px] text-zinc-500 mt-1">Automatic payouts distributed weekly once earnings reach 0.0001 BTC.</p>
+          <p className="text-[10px] text-zinc-500">
+            Automatic PayPal or Bitcoin transfers sent every Friday once earnings reach $10.00.
+          </p>
         </form>
 
       </div>
@@ -214,7 +225,6 @@ export function ReferralModal({ isOpen, onClose, userId }: ReferralModalProps) {
   );
 }
 
-// Banner displayed when someone visits via a friend's referral link
 export function ReferralWelcomeBanner() {
   const [referrer, setReferrer] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -226,22 +236,6 @@ export function ReferralWelcomeBanner() {
       if (ref) {
         localStorage.setItem("velvet_referred_by", ref);
         setReferrer(ref);
-
-        // Notify backend of referred session
-        const currentUserId = localStorage.getItem("velvet_user_id") || "guest_" + Math.random().toString(36).substring(2, 7);
-        localStorage.setItem("velvet_user_id", currentUserId);
-
-        fetch("/api/user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: currentUserId,
-            referred_by: ref
-          })
-        }).catch(() => {});
-      } else {
-        const saved = localStorage.getItem("velvet_referred_by");
-        if (saved) setReferrer(saved);
       }
     }
   }, []);
@@ -249,7 +243,7 @@ export function ReferralWelcomeBanner() {
   if (!referrer || dismissed) return null;
 
   return (
-    <div className="bg-gradient-to-r from-emerald-900/60 via-teal-900/60 to-purple-900/60 border-b border-emerald-500/30 px-4 py-2 text-center text-xs flex items-center justify-center gap-3 animate-fade-in">
+    <div className="bg-gradient-to-r from-emerald-900/60 via-teal-900/60 to-purple-900/60 border-b border-emerald-500/30 px-4 py-2 text-center text-xs flex items-center justify-center gap-3 animate-fade-in z-30 relative">
       <span className="flex items-center gap-1.5 font-bold text-emerald-300">
         <Gift className="w-4 h-4 text-emerald-400 animate-bounce" />
         🎉 Friend Invite Activated!
@@ -257,10 +251,7 @@ export function ReferralWelcomeBanner() {
       <span className="text-zinc-200 hidden sm:inline">
         You were invited by <strong className="text-white font-mono">{referrer}</strong>. +50 Free Gems &amp; 4K Render Unlocked!
       </span>
-      <button
-        onClick={() => setDismissed(true)}
-        className="text-zinc-400 hover:text-white text-xs ml-2"
-      >
+      <button onClick={() => setDismissed(true)} className="text-zinc-400 hover:text-white text-xs ml-2">
         ✕
       </button>
     </div>
