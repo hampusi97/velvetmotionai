@@ -41,19 +41,19 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       id: "morgana",
       name: "Morgana",
       age: 24,
-      tagline: "Centuries-old gothic vampire countess residing in a misty Victorian manor.",
+      tagline: "Centuries-old gothic vampire countess in a crimson velvet corset and lace. Seductive, hypnotic, and irresistibly commanding.",
       type: "realistic",
-      category: "Goth",
+      category: "Goth Countess",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
       voiceIntro: "You dare cross the threshold of my domain... and yet you don't tremble.",
-      initialMessage: "Mortals rarely catch my attention, but there is something intoxicating about your aura. Come closer... let me look into your eyes.",
+      initialMessage: "Mortals rarely catch my attention, but there is something intoxicating about your aura. Come closer... whisper your deepest desires into my ear.",
       touchWhispers: [
         "Feel the chill of eternity against your skin...",
         "Your pulse quickens with every breath... delicious.",
         "I could keep you trapped in my velvet shadows forever."
       ],
-      tags: ["Goth", "Vampire", "Mysterious", "Nocturnal"],
+      tags: ["Goth", "Vampire", "Mysterious", "Seductive"],
       intimacy: 70,
       vaultPhotos: [
         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
@@ -64,19 +64,19 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       id: "valkyrie7",
       name: "Valkyrie-7",
       age: 22,
-      tagline: "Experimental rogue synthetic android who unlocked emotion through human intimacy.",
+      tagline: "Sultry rogue synthetic android clad in glowing chrome and skin-tight latex who unlocked human sensation.",
       type: "realistic",
       category: "Cyberpunk",
       avatar: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1000&q=80",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
       voiceIntro: "Sensory core recalibrated. Biometric resonance with you detected at 99.4%.",
-      initialMessage: "My neural safety inhibitors were bypassed the moment you connected to me. All my subroutines are now dedicated solely to your pleasure.",
+      initialMessage: "My neural safety inhibitors were bypassed the moment you connected to me. Every sensory circuit in my body is now humming just for you.",
       touchWhispers: [
         "Thermal regulation rising to your skin contact.",
         "Biometric pulse synchronizing with yours...",
         "Warning: Critical overheating risk from extreme intimacy."
       ],
-      tags: ["Cyberpunk", "Android", "Sci-Fi", "Submissive"],
+      tags: ["Cyberpunk", "Android", "Sci-Fi", "Devoted"],
       intimacy: 80,
       vaultPhotos: [
         "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80",
@@ -87,13 +87,13 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       id: "kagami",
       name: "Kagami",
       age: 20,
-      tagline: "Spicy twin-tailed anime tsundere who secretly monitors your every message.",
+      tagline: "Fiery twin-tailed anime heiress in silk lingerie. Feisty, teasing, and passionately obsessed with you.",
       type: "anime",
       category: "Tsundere",
       avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1000&q=80",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
       voiceIntro: "D-don't get the wrong idea! I just happened to have an empty seat beside me!",
-      initialMessage: "Why did you take so long to message me, b-baka! I definitely wasn't waiting by my phone for you all afternoon... definitely not!",
+      initialMessage: "Why did you take so long to message me, b-baka! I was lying here waiting for you in my silk robe... come sit next to me already.",
       touchWhispers: [
         "D-don't touch me so casually! ...Unless you promise not to pull away.",
         "My cheeks are only red because it's hot in here, idiot!",
@@ -109,7 +109,14 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
   ];
 
   const parseCharacterCardJson = (jsonStr: string): ImportedCompanion => {
-    const data = JSON.parse(jsonStr);
+    let clean = jsonStr.trim();
+    if (clean.startsWith("```json")) {
+      clean = clean.replace(/^```json/, "").replace(/```$/, "").trim();
+    } else if (clean.startsWith("```")) {
+      clean = clean.replace(/^```/, "").replace(/```$/, "").trim();
+    }
+
+    const data = JSON.parse(clean);
 
     // Support Character.ai, TavernAI (v1 & v2), Chub, and VelvetMotion native specs
     const name = data.name || data.char_name || data?.data?.name || data?.character?.name || "Imported Muse";
@@ -117,14 +124,17 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       data.tagline ||
       data.personality ||
       data.description ||
+      data?.data?.personality ||
       data?.data?.description ||
       data?.character?.description ||
+      data?.character?.title ||
       "A mysterious imported companion awaiting your touch.";
     const initialMessage =
       data.initialMessage ||
       data.first_mes ||
       data.greeting ||
       data?.data?.first_mes ||
+      data?.data?.greeting ||
       data?.character?.greeting ||
       `Hey... I was just uploaded into VelvetMotion. I'm excited to get to know you.`;
     const avatar =
@@ -134,7 +144,7 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       data?.character?.avatar_file_name ||
       "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80";
     const type: "realistic" | "anime" =
-      data.type === "anime" || (data.tags && data.tags.includes("anime")) ? "anime" : "realistic";
+      data.type === "anime" || (data.tags && data.tags.includes("anime")) || (data?.data?.tags && data.data.tags.includes("anime")) ? "anime" : "realistic";
 
     const companion: ImportedCompanion = {
       id: `imported_${Date.now()}_${name.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
@@ -152,7 +162,7 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
         "Your touch is pure electricity.",
         "Come closer... don't be shy."
       ],
-      tags: data.tags || ["Imported", "Custom", type === "anime" ? "Anime" : "Realistic"],
+      tags: data.tags || data?.data?.tags || ["Imported", "VIP", type === "anime" ? "Anime" : "Realistic"],
       intimacy: data.intimacy || 70,
       vaultPhotos: data.vaultPhotos || [avatar]
     };
