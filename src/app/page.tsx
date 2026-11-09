@@ -12,6 +12,7 @@ import {
 import { PermissionsModal } from "../components/PermissionsModal";
 import { VelvetGramModal } from "../components/VelvetGramModal";
 import { GachaMachineModal } from "../components/GachaMachineModal";
+import { CharacterImporterModal, ImportedCompanion } from "../components/CharacterImporterModal";
 import { ShareHubModal } from "../components/ShareHubModal";
 import { ReengagementEngine } from "../components/ReengagementEngine";
 import { VIPLoyaltyModal } from "../components/VIPLoyaltyModal";
@@ -144,6 +145,7 @@ export default function Home() {
   // Modals
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [showGramModal, setShowGramModal] = useState(false);
+  const [showImporterModal, setShowImporterModal] = useState(false);
   const [showGachaModal, setShowGachaModal] = useState(false);
   const [gemsCount, setGemsCount] = useState(65);
   const [activeDateScenario, setActiveDateScenario] = useState<{ scene: string; choices: string[] } | null>(null);
