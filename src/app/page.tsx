@@ -223,7 +223,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedGirl, setSelectedGirl] = useState<Companion>(defaultCompanions[0]);
-  const [showRightDrawer, setShowRightDrawer] = useState(true);
+  const [showRightDrawer, setShowRightDrawer] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -687,7 +687,7 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#07060A] text-white flex flex-col overflow-hidden select-none relative font-sans">
+    <div className="h-dvh w-screen bg-[#07060A] text-white flex flex-col overflow-hidden relative font-sans">
       {/* Automated Tab & Push Notification Re-Engagement Engine */}
       <ReengagementEngine activeCompanionName={selectedGirl?.name || "Chloe"} />
       
@@ -875,21 +875,15 @@ export default function Home() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => setShowBuilder(true)}
-                    className="px-4 py-2.5 rounded-xl bg-white text-black font-bold text-xs"
+                    className="h-11 rounded-full bg-white px-5 text-sm font-semibold text-black"
                   >
                     Make your own
                   </button>
                   <button
                     onClick={() => setShowImporterModal(true)}
-                    className="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-pink-600/30 transition-all active:scale-95"
+                    className="h-11 rounded-full border border-white/15 px-5 text-sm text-white"
                   >
-                    <span>📥</span> Import AI Girl (.json)
-                  </button>
-                  <button
-                    onClick={() => setShowGramModal(true)}
-                    className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs flex items-center gap-2 transition-all active:scale-95"
-                  >
-                    <span>🎬</span> Reels Feed
+                    Import
                   </button>
                 </div>
               </div>
@@ -944,54 +938,30 @@ export default function Home() {
                         setSelectedGirl(girl);
                         setActiveTab("chats");
                       }}
-                      className="group relative rounded-3xl overflow-hidden border border-white/10 hover:border-pink-500/60 bg-[#0E0C15] transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-pink-600/10 cursor-pointer flex flex-col justify-between"
+                      className={`group relative overflow-hidden rounded-[28px] border bg-black cursor-pointer transition duration-300 hover:-translate-y-1 ${
+                        selectedGirl.id === girl.id ? "border-pink-500 shadow-lg shadow-pink-600/20" : "border-white/10 hover:border-white/30"
+                      }`}
                     >
-                      <div className="relative aspect-[3/4] w-full overflow-hidden bg-black">
+                      <div className="relative aspect-[3/4] w-full overflow-hidden">
                         <img
                           src={girl.avatar}
-                          alt={girl.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                          alt=""
+                          className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0E0C15] via-transparent to-black/30" />
-                        
-                        <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-pink-400 border border-pink-500/30">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-black/20" />
+                        <div className="absolute left-3 right-3 top-3 flex items-center justify-between">
+                          <span className="rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur">
                             {girl.category}
                           </span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
+                          <span className="rounded-full bg-black/50 px-2 py-1 text-[10px] text-emerald-300 backdrop-blur">Online</span>
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 p-4">
+                          <h3 className="text-xl font-semibold tracking-tight text-white">{girl.name}, {girl.age}</h3>
+                          <p className="mt-1 line-clamp-2 text-sm leading-snug text-white/80">{girl.tagline}</p>
+                          <span className="mt-3 inline-flex h-9 items-center rounded-full bg-white px-4 text-xs font-semibold text-black">
+                            Talk
                           </span>
                         </div>
-
-                        <div className="absolute bottom-3 left-3 right-3 space-y-1">
-                          <div className="flex items-baseline justify-between">
-                            <h3 className="text-lg font-black text-white">{girl.name}, {girl.age}</h3>
-                            <span className="text-[10px] text-pink-400 font-mono">Affection: {girl.intimacy}%</span>
-                          </div>
-                          <p className="text-xs text-zinc-300 line-clamp-2 leading-relaxed">
-                            {girl.tagline}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="p-3.5 bg-[#0E0C15] border-t border-white/[0.06] flex items-center justify-between">
-                        <div className="flex gap-1 overflow-hidden max-w-[60%]">
-                          {girl.tags.slice(0, 2).map((t, idx) => (
-                            <span key={idx} className="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] text-zinc-400 truncate">
-                              #{t}
-                            </span>
-                          ))}
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedGirl(girl);
-                            setActiveTab("chats");
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1 shrink-0"
-                        >
-                          Enter Room ➔
-                        </button>
                       </div>
                     </div>
                   ))}
@@ -999,7 +969,8 @@ export default function Home() {
             </div>
           </main>
         ) : (
-          <main className="flex-1 flex flex-col justify-between bg-[#0B0912]/80 relative overflow-hidden">
+          <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#0B0912]">
+          <img src={selectedGirl.avatar} alt="" className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-[0.14] blur-3xl" />
           
           {/* Room Header */}
           <div className="h-16 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between bg-[#0E0C15]/50 backdrop-blur-md shrink-0">
@@ -1020,8 +991,8 @@ export default function Home() {
                     {selectedGirl.category}
                   </span>
                 </h3>
-                <p className="text-[11px] text-emerald-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Memory Synced • Online
+                <p className="text-[11px] text-white/50">
+                  {liveModel ? "Live model" : "On this device"}
                 </p>
               </div>
             </div>
@@ -1047,33 +1018,16 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="lg:hidden border-b border-white/10 px-4 py-3 space-y-2">
-            <p className="text-[11px] font-bold text-zinc-300">With {selectedGirl.name}. What she keeps</p>
-            <p className="text-[11px] text-zinc-500">{liveModel ? "Live model sends this reply to the server." : "This chat stays on this device."}</p>
-            <textarea value={backstoryDraft} onChange={(event) => setBackstoryDraft(event.target.value)} placeholder="Backstory she cannot drop" rows={2} className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white" />
-            <button type="button" onClick={() => saveBackstory(backstoryDraft)} className="rounded-xl border border-white/10 px-3 py-1 text-[11px] text-zinc-200">Save backstory</button>
-            <form
-              className="flex gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const fact = memoryDraft.trim();
-                if (!fact || memory.includes(fact)) return;
-                writeMemory([fact, ...memory]);
-                setMemoryDraft("");
-              }}
-            >
-              <input value={memoryDraft} onChange={(event) => setMemoryDraft(event.target.value)} placeholder="Add a fact" className="min-w-0 flex-1 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white" />
-              <button type="submit" className="rounded-xl bg-pink-600 px-3 text-[11px] font-bold text-white">Keep</button>
-            </form>
-          </div>
-
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 relative">
             {messages.map((m) => {
               const isUser = m.sender === "user";
               return (
-                <div key={m.id} className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
-                  <span className="text-[10px] text-zinc-500 font-bold mb-1">{isUser ? "You" : selectedGirl.name}</span>
+                <div key={m.id} className={`bubble-in flex items-end gap-2 ${isUser ? "justify-end" : "justify-start"}`}>
+                  {!isUser ? (
+                    <img src={selectedGirl.avatar} alt="" className="mb-1 h-8 w-8 shrink-0 rounded-full object-cover" />
+                  ) : null}
+                  <div className={`flex max-w-[78%] flex-col ${isUser ? "items-end" : "items-start"}`}>
+                  <span className="mb-1 text-[10px] text-zinc-500">{isUser ? "You" : selectedGirl.name}</span>
                   
                   {/* Photo Sent from User Gallery */}
                   {m.type === "user_photo" && m.mediaUrl && (
@@ -1097,69 +1051,44 @@ export default function Home() {
                   )}
 
                   <div
-                    className={`max-w-[85%] sm:max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
+                    className={`max-w-full px-4 py-3 text-sm leading-relaxed ${
                       isUser
-                        ? "bg-pink-600 text-white rounded-br-none"
-                        : "bg-[#181424] border border-white/10 text-zinc-200 rounded-bl-none shadow-lg"
+                        ? "rounded-3xl rounded-br-md bg-white text-black"
+                        : "rounded-3xl rounded-bl-md bg-white/10 text-white backdrop-blur"
                     }`}
                   >
                     {m.text}
+                  </div>
                   </div>
                 </div>
               );
             })}
 
             {isTyping && (
-              <div className="flex items-center gap-2 text-xs text-zinc-400">
-                <span className="w-2 h-2 rounded-full bg-pink-500 animate-ping" />
-                <span>{selectedGirl.name} is typing...</span>
+              <div className="flex items-center gap-2 pl-10 text-xs text-zinc-400">
+                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-white" />
+                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-white" />
+                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-white" />
               </div>
             )}
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Chat Input with Gallery Attachment Button */}
-          <div className="p-3 sm:p-4 bg-[#0E0C15]/80 border-t border-white/[0.08] space-y-2.5">
-            
-            {/* Interactive Branching Choice Buttons */}
+          <div className="relative border-t border-white/10 bg-[#07060A]/80 p-3 backdrop-blur sm:p-4">
             {activeDateScenario && (
-              <div className="p-3 bg-black/70 rounded-2xl border border-amber-500/40 space-y-2 animate-fade-in">
-                <p className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Choose your response:</p>
-                <div className="space-y-1.5">
-                  {activeDateScenario.choices.map((c, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleChooseOption(c)}
-                      className="w-full text-left p-2.5 rounded-xl bg-white/[0.04] hover:bg-pink-600/20 hover:border-pink-500/50 border border-white/10 text-xs text-white transition-all"
-                    >
-                      👉 {c}
-                    </button>
-                  ))}
-                </div>
+              <div className="mb-2 space-y-1.5">
+                {activeDateScenario.choices.map((c, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleChooseOption(c)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-sm text-white"
+                  >
+                    {c}
+                  </button>
+                ))}
               </div>
             )}
-
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
-              <label className="px-3 py-1.5 rounded-full bg-purple-600/20 border border-purple-500/40 text-purple-300 hover:bg-purple-600 hover:text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shrink-0">
-                <span>🎨</span> Style to Companion
-                <input type="file" accept="image/*" onChange={handleCreateFromAesthetic} className="hidden" />
-              </label>
-              <button
-                onClick={() => galleryInputRef.current?.click()}
-                className="px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-black text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
-              >
-                <Camera className="w-3.5 h-3.5" /> Send My Photo
-              </button>
-              <button
-                onClick={handleStartDateScenario}
-                className="px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500 hover:text-black text-xs font-bold flex items-center gap-1.5 shrink-0"
-              >
-                🥂 Start Date Scenario
-              </button>
-            </div>
-
             <div className="flex items-center gap-2">
-              {/* Native Gallery / Camera Input */}
               <input
                 ref={galleryInputRef}
                 type="file"
@@ -1169,25 +1098,25 @@ export default function Home() {
               />
               <button
                 onClick={() => galleryInputRef.current?.click()}
-                title="Upload Photo from Gallery"
-                className="p-3 rounded-2xl bg-white/[0.05] hover:bg-white/10 text-zinc-300 border border-white/10 transition-all shrink-0"
+                title="Send a photo"
+                className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-white/10 text-zinc-300"
               >
-                <Paperclip className="w-4 h-4" />
+                <Paperclip className="h-4 w-4" />
               </button>
-
               <input
                 type="text"
-                placeholder={`Message ${selectedGirl.name}...`}
+                placeholder={`Message ${selectedGirl.name}`}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                className="flex-1 bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-pink-500 transition-all"
+                className="h-12 min-w-0 flex-1 rounded-full border border-white/10 bg-white/5 px-4 text-sm text-white outline-none focus:border-white/30"
               />
               <button
                 onClick={() => handleSend()}
-                className="p-3 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold shadow-lg shadow-pink-600/30 active:scale-95"
+                className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-black"
+                aria-label="Send"
               >
-                <Send className="w-4 h-4" />
+                <Send className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -1196,18 +1125,15 @@ export default function Home() {
 
         {/* Right Drawer: Live Screen & Vault Photos */}
         {showRightDrawer && activeTab === "chats" && (
-          <aside className="w-80 border-l border-white/[0.08] bg-[#0E0C15]/90 flex flex-col justify-between overflow-y-auto hidden lg:flex shrink-0 p-5 space-y-6">
-            <div className="relative aspect-[9/12] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black">
-              <video src={selectedGirl.video} autoPlay loop playsInline className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-bold text-white">{selectedGirl.name}</h4>
-                  <p className="text-[10px] text-zinc-400">{selectedGirl.category}</p>
-                </div>
-                <button onClick={() => playVoice(selectedGirl.voiceIntro)} className="w-8 h-8 rounded-full bg-pink-600 flex items-center justify-center text-white">
-                  <Volume2 className="w-4 h-4" />
-                </button>
+          <button type="button" aria-label="Close details" className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setShowRightDrawer(false)} />
+        )}
+        {showRightDrawer && activeTab === "chats" && (
+          <aside className="fixed inset-y-0 right-0 z-40 flex w-[min(100%,22rem)] flex-col gap-4 overflow-y-auto border-l border-white/10 bg-[#0E0C15] p-5 lg:static lg:z-0 lg:flex lg:shrink-0">
+            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl bg-black">
+              <img src={selectedGirl.avatar} alt="" className="h-full w-full object-cover" />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black to-transparent p-4">
+                <h4 className="text-lg font-semibold text-white">{selectedGirl.name}</h4>
+                <p className="text-xs text-white/70">{selectedGirl.category}</p>
               </div>
             </div>
 
