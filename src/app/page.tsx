@@ -27,7 +27,12 @@ interface Companion {
 }
 
 export default function Home() {
-  // Full Roster: Realistic + Anime
+  // Intro Kiss & Giggle State
+  const [showIntro, setShowIntro] = useState(true);
+  const [kissTriggered, setKissTriggered] = useState(false);
+  const [kissImpact, setKissImpact] = useState(false);
+
+  // Companion Catalog
   const defaultCompanions: Companion[] = [
     {
       id: "chloe",
@@ -145,7 +150,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Selected Companion Room
+  // Companion Room
   const [selectedGirl, setSelectedGirl] = useState<Companion | null>(null);
   const [roomTab, setRoomTab] = useState<"chat" | "vault" | "video">("chat");
   const [roomMessages, setRoomMessages] = useState<{ sender: string; text: string }[]>([]);
@@ -158,7 +163,7 @@ export default function Home() {
   const [isCalling, setIsCalling] = useState(false);
   const [callConnected, setCallConnected] = useState(false);
 
-  // Character Creator Modal State
+  // Companion Creator
   const [showCreatorModal, setShowCreatorModal] = useState(false);
   const [creatorForm, setCreatorForm] = useState({
     name: "",
@@ -181,15 +186,66 @@ export default function Home() {
     }
   }, []);
 
-  // Filter companions
-  const filteredCompanions = companions.filter(c => {
-    const matchesType = activeTypeTab === "all" || c.type === activeTypeTab;
-    const matchesCat = activeCategory === "All" || c.category === activeCategory;
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesType && matchesCat && matchesSearch;
-  });
+  // Web Audio Synthesizer: Smooch Sound + Playful Giggle + Whisper
+  const triggerKissAndGiggleAudio = () => {
+    if (typeof window === "undefined") return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        
+        // 1. Smooch Sound
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.setValueAtTime(750, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(280, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.35, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.19);
 
-  // Voice Note Synthesis
+        // 2. Playful Giggle Sequence (3 short melodic bursts)
+        [0.25, 0.40, 0.55].forEach((delay, i) => {
+          const gOsc = ctx.createOscillator();
+          const gGain = ctx.createGain();
+          gOsc.type = "sine";
+          gOsc.frequency.setValueAtTime(520 + i * 40, ctx.currentTime + delay);
+          gOsc.frequency.exponentialRampToValueAtTime(640 + i * 40, ctx.currentTime + delay + 0.08);
+          gGain.gain.setValueAtTime(0.08, ctx.currentTime + delay);
+          gGain.gain.exponentialRampToValueAtTime(0.005, ctx.currentTime + delay + 0.09);
+          gOsc.connect(gGain);
+          gGain.connect(ctx.destination);
+          gOsc.start(ctx.currentTime + delay);
+          gOsc.stop(ctx.currentTime + delay + 0.10);
+        });
+      }
+
+      // 3. Companion Whisper
+      if ("speechSynthesis" in window) {
+        setTimeout(() => {
+          const u = new SpeechSynthesisUtterance("Mmm... welcome to VelvetMotion, handsome.");
+          u.pitch = 1.25;
+          u.rate = 0.90;
+          window.speechSynthesis.speak(u);
+        }, 600);
+      }
+    } catch (e) {}
+  };
+
+  const handleEnterIntro = () => {
+    setKissTriggered(true);
+    setTimeout(() => {
+      setKissImpact(true);
+      triggerKissAndGiggleAudio();
+    }, 400);
+
+    setTimeout(() => {
+      setShowIntro(false);
+    }, 2600);
+  };
+
   const playVoice = (phrase: string) => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
@@ -200,7 +256,6 @@ export default function Home() {
     }
   };
 
-  // Open Room
   const openRoom = (girl: Companion) => {
     setSelectedGirl(girl);
     setCurrentVideo(girl.video);
@@ -208,7 +263,6 @@ export default function Home() {
     setRoomMessages([{ sender: girl.name, text: girl.initialMessage }]);
   };
 
-  // Send Message
   const sendMessage = (textToSend?: string) => {
     const msg = textToSend || chatInput;
     if (!msg.trim() || !selectedGirl) return;
@@ -221,7 +275,7 @@ export default function Home() {
         "Mmm, I love when you talk to me like that...",
         "You're making my heart beat so fast right now!",
         "Look at my new photo in the Vault, I unlocked it for you!",
-        "Come closer to the screen... I want to hear your voice."
+        "Come closer to the screen... I want to look into your eyes."
       ];
       const reply = replies[Math.floor(Math.random() * replies.length)];
       setRoomMessages(prev => [...prev, { sender: selectedGirl.name, text: reply }]);
@@ -229,7 +283,6 @@ export default function Home() {
     }, 900);
   };
 
-  // Trigger Video Prompt Motion
   const handleGenerateMotion = (promptText?: string) => {
     const p = promptText || videoPrompt || "leans forward, blows kiss towards camera";
     setIsGeneratingVideo(true);
@@ -240,7 +293,6 @@ export default function Home() {
     }, 2200);
   };
 
-  // FaceTime Call
   const startCall = () => {
     if (!selectedGirl) return;
     setIsCalling(true);
@@ -259,7 +311,6 @@ export default function Home() {
     }
   };
 
-  // Create Companion Action
   const handleCreateCompanion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!creatorForm.name.trim()) return;
@@ -276,7 +327,7 @@ export default function Home() {
         : "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=80",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
       voiceIntro: `Hello! I'm ${creatorForm.name}, your customized companion.`,
-      initialMessage: `I'm so excited you brought me to life! What should we explore together?`,
+      initialMessage: `I'm so excited you created me! What should we explore together?`,
       tags: creatorForm.tags.split(",").map(t => t.trim()),
       intimacy: 50,
       vaultPhotos: [
@@ -290,17 +341,55 @@ export default function Home() {
     openRoom(newCompanion);
   };
 
+  const filteredCompanions = companions.filter(c => {
+    const matchesType = activeTypeTab === "all" || c.type === activeTypeTab;
+    const matchesCat = activeCategory === "All" || c.category === activeCategory;
+    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesType && matchesCat && matchesSearch;
+  });
+
   return (
     <div className="min-h-screen bg-candyDark text-white flex flex-col select-none relative">
       
-      {/* Top Ambient Glows */}
-      <div className="fixed top-0 left-1/4 w-[600px] h-[600px] bg-candyPink/10 rounded-full blur-[170px] pointer-events-none -z-10" />
-      <div className="fixed bottom-0 right-1/4 w-[600px] h-[600px] bg-candyPurple/10 rounded-full blur-[180px] pointer-events-none -z-10" />
+      {/* 💋 INTERACTIVE WELCOME SCREEN WITH KISS & GIGGLE */}
+      {showIntro && (
+        <div
+          onClick={handleEnterIntro}
+          className={`fixed inset-0 z-[200] flex flex-col items-center justify-center cursor-pointer transition-opacity duration-1000 ${
+            kissImpact ? "bg-black/85 backdrop-blur-3xl" : "bg-black/95 backdrop-blur-2xl"
+          }`}
+        >
+          {!kissTriggered ? (
+            <div className="text-center z-10 px-6 animate-pulse flex flex-col items-center gap-5">
+              <div className="w-24 h-24 rounded-full p-[2px] bg-gradient-to-tr from-candyPink via-pink-600 to-purple-600 shadow-2xl shadow-candyPink/50">
+                <div className="w-full h-full rounded-full bg-candyDark flex items-center justify-center">
+                  <Heart className="w-10 h-10 text-candyPink animate-bounce" />
+                </div>
+              </div>
+              <h2 className="text-4xl font-black text-white tracking-tight">
+                VELVET<span className="text-candyPink">MOTION</span>
+              </h2>
+              <p className="text-xs text-zinc-400 tracking-widest uppercase font-medium">Tap anywhere for your welcome kiss</p>
+            </div>
+          ) : (
+            <div className="relative flex flex-col items-center">
+              <svg viewBox="0 0 100 70" className="w-56 h-auto filter drop-shadow-[0_0_40px_#FF007F] text-candyPink fill-current animate-pulse">
+                <path d="M50 15 C40 5, 20 5, 10 20 C18 24, 30 22, 50 30 C70 22, 82 24, 90 20 C80 5, 60 5, 50 15 Z" />
+                <path d="M10 28 C25 35, 38 33, 50 38 C62 33, 75 35, 90 28 C75 55, 65 65, 50 60 C35 65, 25 55, 10 28 Z" />
+              </svg>
+              <div className="absolute inset-0 rounded-full border-2 border-candyPink/60 animate-ping pointer-events-none" />
+              <p className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-candyPink to-white mt-6">
+                *kisses your screen* &ldquo;Hehe... welcome, handsome.&rdquo;
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* TOP NAVBAR */}
       <header className="sticky top-0 z-40 backdrop-blur-2xl bg-candyDark/85 border-b border-white/[0.08] px-6 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-candyPink via-pink-600 to-candyPurple p-[2px] shadow-lg shadow-candyPink/30">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-candyPink via-pink-600 to-purple-600 p-[2px] shadow-lg shadow-candyPink/30">
             <div className="w-full h-full bg-candyDark rounded-[10px] flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-candyPink" />
             </div>
@@ -310,20 +399,25 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Search */}
         <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-candySurface border border-white/10 w-80">
           <Search className="w-4 h-4 text-zinc-400" />
           <input
             type="text"
-            placeholder="Search Realistic, Anime, Goth waifus..."
+            placeholder="Search Realistic, Anime, Waifus..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="bg-transparent text-xs text-white focus:outline-none w-full"
           />
         </div>
 
-        {/* CTA Buttons */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => { setShowIntro(true); setKissTriggered(false); setKissImpact(false); }}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs text-zinc-300 hover:border-candyPink"
+          >
+            <span>💋</span> Replay Kiss
+          </button>
+
           <button
             onClick={() => setShowCreatorModal(true)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-candyPink/15 border border-candyPink/40 text-candyPink hover:bg-candyPink hover:text-white text-xs font-bold transition-all shadow-lg shadow-candyPink/20 active:scale-95"
@@ -333,12 +427,12 @@ export default function Home() {
 
           {isVIP ? (
             <span className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 text-xs font-bold flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> VIP (No Ads)
+              <Sparkles className="w-3.5 h-3.5" /> VIP (No Ads)
             </span>
           ) : (
             <button
               onClick={() => setShowVIPModal(true)}
-              className="px-4 py-1.5 rounded-full bg-gradient-to-r from-candyPink to-candyPurple text-xs font-bold text-white shadow-lg shadow-candyPink/30 transition-all flex items-center gap-1.5 active:scale-95"
+              className="px-4 py-1.5 rounded-full bg-gradient-to-r from-candyPink to-purple-600 text-xs font-bold text-white shadow-lg shadow-candyPink/30 transition-all flex items-center gap-1.5 active:scale-95"
             >
               <Zap className="w-3.5 h-3.5" /> VIP Pass
             </button>
@@ -349,11 +443,7 @@ export default function Home() {
       {/* STORIES / SNAPS BAR */}
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-5 pb-2 flex items-center gap-4 overflow-x-auto scrollbar-none">
         {companions.map(girl => (
-          <div
-            key={girl.id}
-            onClick={() => openRoom(girl)}
-            className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
-          >
+          <div key={girl.id} onClick={() => openRoom(girl)} className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0">
             <div className="w-16 h-16 rounded-full story-ring transition-transform group-hover:scale-105">
               <img src={girl.avatar} alt={girl.name} className="w-full h-full rounded-full object-cover border-2 border-candyDark" />
             </div>
@@ -364,9 +454,8 @@ export default function Home() {
         ))}
       </div>
 
-      {/* DUAL MODE SELECTOR: REALISTIC VS ANIME */}
+      {/* DUAL MODE: REALISTIC VS ANIME */}
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/[0.06]">
-        {/* Type Switcher */}
         <div className="flex p-1 rounded-xl bg-candySurface border border-white/10 w-full sm:w-auto">
           {[
             { key: "all", label: "✨ All Girls" },
@@ -377,9 +466,7 @@ export default function Home() {
               key={tab.key}
               onClick={() => setActiveTypeTab(tab.key as any)}
               className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTypeTab === tab.key
-                  ? "bg-candyPink text-white shadow-lg shadow-candyPink/40"
-                  : "text-zinc-400 hover:text-white"
+                activeTypeTab === tab.key ? "bg-candyPink text-white shadow-lg shadow-candyPink/40" : "text-zinc-400 hover:text-white"
               }`}
             >
               {tab.label}
@@ -387,16 +474,13 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Category Pills */}
         <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto scrollbar-none pb-1 sm:pb-0">
           {["All", "Sweetheart", "Luxury", "Edgy", "Tsundere", "Idol", "Goth"].map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={`px-3 py-1 rounded-full text-xs font-semibold transition-all shrink-0 ${
-                activeCategory === cat
-                  ? "bg-white/20 text-white border border-white/30"
-                  : "bg-candySurface border border-white/10 text-zinc-400 hover:text-white"
+                activeCategory === cat ? "bg-white/20 text-white border border-white/30" : "bg-candySurface border border-white/10 text-zinc-400 hover:text-white"
               }`}
             >
               {cat}
@@ -405,25 +489,15 @@ export default function Home() {
         </div>
       </div>
 
-      {/* COMPANION MARKETPLACE GRID */}
+      {/* MARKETPLACE GRID */}
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 pb-20 flex-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCompanions.map(girl => (
-            <div
-              key={girl.id}
-              onClick={() => openRoom(girl)}
-              className="candy-card rounded-3xl overflow-hidden cursor-pointer group relative flex flex-col"
-            >
-              {/* Photo Box */}
+            <div key={girl.id} onClick={() => openRoom(girl)} className="candy-card rounded-3xl overflow-hidden cursor-pointer group relative flex flex-col">
               <div className="relative aspect-[3/4] w-full overflow-hidden bg-zinc-950">
-                <img
-                  src={girl.avatar}
-                  alt={girl.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-95 group-hover:brightness-100"
-                />
+                <img src={girl.avatar} alt={girl.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-95 group-hover:brightness-100" />
                 <div className="absolute inset-0 bg-gradient-to-t from-candyDark via-candyDark/25 to-transparent" />
-
-                {/* Badges */}
+                
                 <div className="absolute top-4 left-4 flex items-center gap-2">
                   <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[11px] font-semibold text-white flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Online
@@ -433,26 +507,18 @@ export default function Home() {
                   </span>
                 </div>
 
-                {/* Voice Audio Preview */}
                 <button
-                  onClick={e => {
-                    e.stopPropagation();
-                    playVoice(girl.voiceIntro);
-                  }}
-                  title="Hear her voice"
+                  onClick={e => { e.stopPropagation(); playVoice(girl.voiceIntro); }}
                   className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/15 hover:border-candyPink flex items-center justify-center text-white hover:text-candyPink transition-all"
                 >
                   <Volume2 className="w-4 h-4" />
                 </button>
 
-                {/* Bio Info */}
                 <div className="absolute bottom-4 left-4 right-4 space-y-1.5">
                   <h3 className="text-2xl font-black text-white group-hover:text-candyPink transition-colors">
                     {girl.name}, {girl.age}
                   </h3>
-                  <p className="text-xs text-zinc-300 line-clamp-2 leading-relaxed">
-                    {girl.tagline}
-                  </p>
+                  <p className="text-xs text-zinc-300 line-clamp-2 leading-relaxed">{girl.tagline}</p>
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {girl.tags.map(t => (
                       <span key={t} className="text-[10px] px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-zinc-300">
@@ -463,7 +529,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Card Footer */}
               <div className="p-3.5 bg-candySurface/80 border-t border-white/[0.06] flex items-center justify-between">
                 <span className="text-xs font-bold text-zinc-400 group-hover:text-white transition-colors flex items-center gap-1.5">
                   <MessageCircle className="w-3.5 h-3.5 text-candyPink" /> Chat & View Vault
@@ -475,67 +540,63 @@ export default function Home() {
             </div>
           ))}
         </div>
+
+        {!isVIP && (
+          <div className="mt-12 rounded-2xl border border-white/10 bg-candySurface/60 backdrop-blur-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300">
+                Sponsor
+              </span>
+              <p className="text-xs text-zinc-300">
+                Support VelvetMotion — Trade crypto & Web3 companions with zero fees. Upgrade to VIP to remove ads!
+              </p>
+            </div>
+            <button onClick={() => setShowVIPModal(true)} className="text-xs font-bold text-candyPink hover:underline">
+              Remove Ads ($14.99) ➔
+            </button>
+          </div>
+        )}
       </main>
 
-      {/* ============================================================== */}
-      {/* 💖 FULL COMPANION ROOM: CHAT + PHOTO VAULT + VIDEO STUDIO     */}
-      {/* ============================================================== */}
+      {/* COMPANION ROOM: CHAT + PHOTO VAULT + VIDEO STUDIO */}
       {selectedGirl && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-2 sm:p-6 animate-fade-in">
           <div className="relative w-full max-w-5xl h-[92vh] rounded-3xl bg-candySurface border border-white/10 overflow-hidden flex flex-col lg:flex-row shadow-2xl">
-            
-            {/* Close */}
-            <button
-              onClick={() => setSelectedGirl(null)}
-              className="absolute top-4 right-4 z-30 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-zinc-400 hover:text-white flex items-center justify-center"
-            >
+            <button onClick={() => setSelectedGirl(null)} className="absolute top-4 right-4 z-30 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-zinc-400 hover:text-white flex items-center justify-center">
               <X className="w-4 h-4" />
             </button>
 
-            {/* Left Column: Live Screen / Video */}
             <div className="lg:w-1/2 h-72 lg:h-full relative bg-black flex items-center justify-center overflow-hidden">
               <video src={currentVideo} autoPlay loop playsInline className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-candySurface via-transparent to-black/40 pointer-events-none" />
 
-              {/* Girl Info */}
               <div className="absolute top-4 left-4 z-10 flex items-center gap-3">
                 <img src={selectedGirl.avatar} alt="Avatar" className="w-11 h-11 rounded-full object-cover border-2 border-candyPink" />
                 <div>
-                  <h3 className="text-lg font-bold text-white flex items-center gap-1.5">
-                    {selectedGirl.name}, {selectedGirl.age}
-                  </h3>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-1.5">{selectedGirl.name}, {selectedGirl.age}</h3>
                   <span className="text-[11px] text-emerald-400 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live Now
                   </span>
                 </div>
               </div>
 
-              {/* Call Button */}
-              <button
-                onClick={startCall}
-                className="absolute bottom-6 left-6 z-10 px-4 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/30 transition-all active:scale-95"
-              >
+              <button onClick={startCall} className="absolute bottom-6 left-6 z-10 px-4 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/30 transition-all active:scale-95">
                 <Phone className="w-4 h-4 animate-pulse" /> Video Call Her
               </button>
             </div>
 
-            {/* Right Column: Multi-Tab Interaction (Chat / Vault / Video) */}
             <div className="lg:w-1/2 flex-1 flex flex-col justify-between p-6 bg-candySurface border-t lg:border-t-0 lg:border-l border-white/10">
-              
-              {/* Room Tab Switcher */}
               <div className="flex items-center gap-2 border-b border-white/10 pb-3">
                 {[
-                  { id: "chat", label: "💬 Live Chat", icon: MessageCircle },
-                  { id: "vault", label: "📸 Photo Vault", icon: ImageIcon },
-                  { id: "video", label: "🎬 Video Studio", icon: Video }
+                  { id: "chat", label: "💬 Live Chat" },
+                  { id: "vault", label: "📸 Photo Vault" },
+                  { id: "video", label: "🎬 Video Studio" }
                 ].map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setRoomTab(tab.id as any)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-                      roomTab === tab.id
-                        ? "bg-candyPink text-white shadow-lg shadow-candyPink/30"
-                        : "text-zinc-400 hover:text-white"
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      roomTab === tab.id ? "bg-candyPink text-white shadow-lg shadow-candyPink/30" : "text-zinc-400 hover:text-white"
                     }`}
                   >
                     {tab.label}
@@ -543,7 +604,6 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* TAB 1: LIVE CHAT */}
               {roomTab === "chat" && (
                 <div className="flex-1 flex flex-col justify-between py-2 overflow-hidden">
                   <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1">
@@ -559,7 +619,6 @@ export default function Home() {
                     ))}
                   </div>
 
-                  {/* Reaction Pills */}
                   <div className="py-2 border-t border-white/[0.06]">
                     <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Quick Motion Actions:</span>
                     <div className="flex flex-wrap gap-1.5">
@@ -569,24 +628,15 @@ export default function Home() {
                         { label: "😏 Playful Wink", text: "gives a seductive wink" },
                         { label: "💃 360 Spin", text: "slow 360 spin showcasing full outfit" }
                       ].map(act => (
-                        <button
-                          key={act.label}
-                          onClick={() => handleGenerateMotion(act.text)}
-                          className="text-[11px] px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 hover:border-candyPink text-zinc-300"
-                        >
+                        <button key={act.label} onClick={() => handleGenerateMotion(act.text)} className="text-[11px] px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 hover:border-candyPink text-zinc-300">
                           {act.label}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Input Box + Gift */}
                   <div className="pt-2 flex items-center gap-2">
-                    <button
-                      onClick={() => setShowVIPModal(true)}
-                      title="Send Rose / Bitcoin Gift"
-                      className="p-3 rounded-xl bg-candyPink/10 hover:bg-candyPink text-candyPink hover:text-white border border-candyPink/30 transition-all shrink-0"
-                    >
+                    <button onClick={() => setShowVIPModal(true)} title="Send Rose / Bitcoin Gift" className="p-3 rounded-xl bg-candyPink/10 hover:bg-candyPink text-candyPink hover:text-white border border-candyPink/30 transition-all shrink-0">
                       <Gift className="w-4 h-4" />
                     </button>
                     <input
@@ -597,17 +647,13 @@ export default function Home() {
                       onKeyDown={e => e.key === "Enter" && sendMessage()}
                       className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-candyPink"
                     />
-                    <button
-                      onClick={() => sendMessage()}
-                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-candyPink to-candyPurple font-bold text-xs text-white shadow-lg"
-                    >
+                    <button onClick={() => sendMessage()} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-candyPink to-purple-600 font-bold text-xs text-white shadow-lg">
                       <Send className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* TAB 2: PHOTO VAULT */}
               {roomTab === "vault" && (
                 <div className="flex-1 flex flex-col justify-between py-2 overflow-y-auto">
                   <div className="space-y-3">
@@ -615,7 +661,6 @@ export default function Home() {
                       <span className="text-xs font-bold text-zinc-300">Unlocked Vault Photos ({selectedGirl.vaultPhotos.length})</span>
                       <span className="text-[10px] text-candyPink font-bold">HD Quality</span>
                     </div>
-
                     <div className="grid grid-cols-2 gap-3">
                       {selectedGirl.vaultPhotos.map((photo, i) => (
                         <div key={i} className="relative rounded-2xl overflow-hidden aspect-[3/4] border border-white/10 group">
@@ -630,58 +675,44 @@ export default function Home() {
                 </div>
               )}
 
-              {/* TAB 3: VIDEO STUDIO */}
               {roomTab === "video" && (
                 <div className="flex-1 flex flex-col justify-between py-2 space-y-4">
                   <div>
-                    <label className="text-xs font-bold uppercase text-candyPink block mb-2">Prompt-Driven Video Generation:</label>
+                    <label className="text-xs font-bold uppercase text-candyPink block mb-2">Prompt-Driven Motion:</label>
                     <textarea
                       value={videoPrompt}
                       onChange={e => setVideoPrompt(e.target.value)}
-                      placeholder="Describe what she should do in the video... e.g. 'Slow camera push-in, wind in hair, looking into camera with a sweet smile'"
+                      placeholder="Describe what she should do in the video..."
                       rows={4}
                       className="w-full rounded-2xl bg-black/50 border border-white/10 p-3.5 text-xs text-white focus:outline-none focus:border-candyPink"
                     />
                   </div>
-
                   <button
                     onClick={() => handleGenerateMotion()}
                     disabled={isGeneratingVideo}
-                    className="w-full py-3.5 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-candyPink to-candyPurple text-white shadow-xl shadow-candyPink/30 flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-candyPink to-purple-600 text-white shadow-xl shadow-candyPink/30 flex items-center justify-center gap-2"
                   >
-                    {isGeneratingVideo ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" /> Rendering {selectedGirl.name}&apos;s Video...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" /> Render Custom Video
-                      </>
-                    )}
+                    {isGeneratingVideo ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Render Custom Video
                   </button>
                 </div>
               )}
-
             </div>
           </div>
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* 🌸 CHARACTER CREATOR MODAL ("CREATE YOUR DREAM AI GIRL")       */}
-      {/* ============================================================== */}
+      {/* CHARACTER CREATOR MODAL */}
       {showCreatorModal && (
         <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4">
           <div className="relative w-full max-w-lg rounded-3xl bg-candySurface border border-candyPink/40 p-6 sm:p-8 shadow-2xl">
             <button onClick={() => setShowCreatorModal(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white">
               <X className="w-4 h-4" />
             </button>
-
             <h3 className="text-xl font-black text-white uppercase tracking-wider mb-1 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-candyPink" /> Create Your AI Companion
             </h3>
-            <p className="text-xs text-zinc-400 mb-5">Design her style, personality, and bring her to life instantly.</p>
-
+            <p className="text-xs text-zinc-400 mb-5">Design her style and personality and bring her to life.</p>
             <form onSubmit={handleCreateCompanion} className="space-y-4 text-left">
               <div>
                 <label className="text-xs font-bold text-zinc-300 block mb-1.5">Companion Style:</label>
@@ -706,7 +737,6 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-zinc-300 block mb-1">Name:</label>
@@ -731,9 +761,8 @@ export default function Home() {
                   />
                 </div>
               </div>
-
               <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1">Personality Archetype:</label>
+                <label className="text-xs font-bold text-zinc-300 block mb-1">Archetype:</label>
                 <select
                   value={creatorForm.category}
                   onChange={e => setCreatorForm({ ...creatorForm, category: e.target.value })}
@@ -746,22 +775,7 @@ export default function Home() {
                   <option value="Goth">Goth & Mysterious</option>
                 </select>
               </div>
-
-              <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1">Tagline / Bio:</label>
-                <input
-                  type="text"
-                  placeholder="e.g. An aspiring painter who loves quiet coffee dates"
-                  value={creatorForm.tagline}
-                  onChange={e => setCreatorForm({ ...creatorForm, tagline: e.target.value })}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-candyPink"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3.5 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-candyPink to-candyPurple text-white shadow-xl shadow-candyPink/30"
-              >
+              <button type="submit" className="w-full py-3.5 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-candyPink to-purple-600 text-white shadow-xl shadow-candyPink/30">
                 Spawn Companion Into Studio
               </button>
             </form>
@@ -769,60 +783,43 @@ export default function Home() {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* 📞 FULL-SCREEN FACETIME / VIDEO CALL SIMULATOR                 */}
-      {/* ============================================================== */}
+      {/* FULL-SCREEN FACETIME / VIDEO CALL SIMULATOR */}
       {isCalling && selectedGirl && (
         <div className="fixed inset-0 z-[160] bg-black/95 flex flex-col items-center justify-between p-6 sm:p-10 animate-fade-in">
           <div className="text-center z-10">
             <h2 className="text-2xl font-black text-white">{selectedGirl.name}</h2>
-            <p className="text-xs text-candyPink font-mono mt-1">
-              {callConnected ? "00:34 • Live HD Video Call" : "Calling Companion..."}
-            </p>
+            <p className="text-xs text-candyPink font-mono mt-1">{callConnected ? "00:34 • Live HD Video Call" : "Calling Companion..."}</p>
           </div>
-
           <div className="relative w-full max-w-sm aspect-[9/16] rounded-3xl overflow-hidden border-2 border-candyPink/50 shadow-2xl shadow-candyPink/30 flex items-center justify-center bg-zinc-950">
             {callConnected ? (
               <video src={selectedGirl.video} autoPlay loop playsInline className="w-full h-full object-cover" />
             ) : (
               <div className="flex flex-col items-center gap-4">
-                <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-candyPink to-candyPurple animate-ping">
+                <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-candyPink to-purple-600 animate-ping">
                   <img src={selectedGirl.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                 </div>
                 <p className="text-xs text-zinc-400 font-mono tracking-widest uppercase">Connecting encrypted stream...</p>
               </div>
             )}
           </div>
-
           <div className="flex items-center gap-6 z-10">
-            <button
-              onClick={endCall}
-              className="p-5 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/40 transition-all active:scale-95"
-            >
+            <button onClick={endCall} className="p-5 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/40 transition-all active:scale-95">
               <PhoneOff className="w-7 h-7" />
             </button>
           </div>
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* 💎 VIP CHECKOUT MODAL (CARD + BITCOIN COINBASE PAYOUT)         */}
-      {/* ============================================================== */}
+      {/* VIP CHECKOUT MODAL (CARD + BITCOIN) */}
       {showVIPModal && (
         <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4">
           <div className="relative w-full max-w-md rounded-3xl bg-candySurface border border-candyPink/40 p-6 sm:p-8 shadow-2xl text-center">
-            <button onClick={() => setShowVIPModal(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white">
-              ✕
-            </button>
-
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-candyPink to-candyPurple mx-auto flex items-center justify-center mb-3">
+            <button onClick={() => setShowVIPModal(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white">✕</button>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-candyPink to-purple-600 mx-auto flex items-center justify-center mb-3">
               <Zap className="w-6 h-6 text-white" />
             </div>
-
             <h3 className="text-2xl font-black text-white uppercase tracking-wider">VIP Diamond Pass</h3>
-            <p className="text-xs text-zinc-400 mt-1">100% Ad-Free, Unlock All Photo Vaults, & Unlimited 4K Video Calls.</p>
-
-            {/* Pricing Card */}
+            <p className="text-xs text-zinc-400 mt-1">100% Ad-Free, Unlock Photo Vaults, & Unlimited HD Video Calls.</p>
             <div className="p-4 my-4 rounded-2xl bg-white/[0.03] border border-white/10 text-left">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-bold uppercase text-candyPink">VIP Lifetime Pass</span>
@@ -830,11 +827,10 @@ export default function Home() {
               </div>
               <ul className="text-xs text-zinc-300 space-y-1">
                 <li>✓ Zero advertisements permanently</li>
-                <li>✓ Full Photo Vault access unlocked for all girls</li>
-                <li>✓ Unlimited HD FaceTime Video Calls</li>
+                <li>✓ Full Photo Vault access unlocked</li>
+                <li>✓ Unlimited HD FaceTime Calls</li>
               </ul>
             </div>
-
             <button
               onClick={() => {
                 setIsVIP(true);
@@ -844,12 +840,10 @@ export default function Home() {
                 setShowVIPModal(false);
                 alert("👑 VIP Activated! All ads removed & photo vaults unlocked.");
               }}
-              className="w-full py-3.5 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-candyPink to-candyPurple text-white shadow-lg shadow-candyPink/25 mb-4 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-candyPink to-purple-600 text-white shadow-lg shadow-candyPink/25 mb-4 flex items-center justify-center gap-2"
             >
               <CreditCard className="w-4 h-4" /> Pay $14.99 with Card / Apple Pay
             </button>
-
-            {/* Bitcoin Section */}
             <div className="p-3 rounded-xl bg-black/60 border border-white/10 text-left">
               <p className="text-[10px] uppercase font-bold text-amber-300 mb-1">Or Pay with Coinbase Bitcoin:</p>
               <p className="text-xs font-mono text-zinc-300 truncate">{BTC_ADDRESS}</p>
@@ -867,7 +861,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
