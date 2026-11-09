@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { ReferralModal, ReferralWelcomeBanner } from "../components/ReferralSystem";
 import { 
   Heart, Sparkles, Phone, PhoneOff, Gift, MessageCircle, Play, 
   Download, Wand2, RefreshCw, Zap, Volume2, ShieldCheck, 
@@ -162,6 +163,7 @@ export default function Home() {
   // VIP & Monetization
   const [isVIP, setIsVIP] = useState(false);
   const [showVIPModal, setShowVIPModal] = useState(false);
+  const [showRefModal, setShowRefModal] = useState(false);
   const [copiedBTC, setCopiedBTC] = useState(false);
 
   useEffect(() => {
@@ -351,6 +353,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-candyDark text-white flex flex-col select-none relative transition-colors duration-700">
+      {/* Referral Welcome Banner */}
+      <ReferralWelcomeBanner />
       
       {/* Dynamic Mood Background Lighting */}
       <div className={`fixed top-0 left-1/4 w-[600px] h-[600px] rounded-full blur-[180px] pointer-events-none -z-10 transition-colors duration-700 ${moodBgClasses[roomMood]}`} />
@@ -429,6 +433,14 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* 💸 30% Rev-Share Referral Button */}
+          <button
+            onClick={() => setShowRefModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 text-xs font-bold transition-all shadow-lg shadow-emerald-500/10 active:scale-95"
+          >
+            <span>💸</span> Earn 30% (Rev-Share)
+          </button>
+
           {isVIP ? (
             <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 text-xs font-bold flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5" /> VIP Member (No Ads)
@@ -727,6 +739,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* REFERRAL REVENUE-SHARE MODAL */}
+      <ReferralModal isOpen={showRefModal} onClose={() => setShowRefModal(false)} />
 
       {/* VIP CHECKOUT MODAL (CARD + BITCOIN) */}
       {showVIPModal && (
