@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { VIPModal, LiveBitcoinAdSlot, BTC_PAYOUT_ADDRESS } from "../components/Monetization";
 import { ReferralModal, ReferralWelcomeBanner } from "../components/ReferralSystem";
 import { 
   Heart, Sparkles, Phone, PhoneOff, Gift, MessageCircle, Play, 
@@ -28,6 +29,10 @@ interface Companion {
 }
 
 export default function Home() {
+  // User Session & Persistence
+  const [userId, setUserId] = useState<string>("");
+  const [userRefCode, setUserRefCode] = useState<string>("");
+
   // Intro Kiss & Giggle
   const [showIntro, setShowIntro] = useState(true);
   const [kissTriggered, setKissTriggered] = useState(false);
@@ -164,11 +169,46 @@ export default function Home() {
   const [isVIP, setIsVIP] = useState(false);
   const [showVIPModal, setShowVIPModal] = useState(false);
   const [showRefModal, setShowRefModal] = useState(false);
-  const [copiedBTC, setCopiedBTC] = useState(false);
 
+  // Initialize and Sync Session with Persistent Backend Database
   useEffect(() => {
-    const saved = localStorage.getItem("velvet_vip");
-    if (saved === "true") setIsVIP(true);
+    if (typeof window !== "undefined") {
+      let uid = localStorage.getItem("velvet_user_id");
+      if (!uid) {
+        uid = "u_" + Math.random().toString(36).substring(2, 9);
+        localStorage.setItem("velvet_user_id", uid);
+      }
+      setUserId(uid);
+
+      const savedVIP = localStorage.getItem("velvet_vip");
+      if (savedVIP === "true") setIsVIP(true);
+
+      const referredBy = localStorage.getItem("velvet_referred_by") || undefined;
+
+      // Sync user profile with database
+      fetch(`/api/user?userId=${encodeURIComponent(uid)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.user) {
+            if (data.user.is_vip) {
+              setIsVIP(true);
+              localStorage.setItem("velvet_vip", "true");
+            }
+            if (data.user.referral_code) {
+              setUserRefCode(data.user.referral_code);
+              localStorage.setItem("velvet_my_ref_code", data.user.referral_code);
+            }
+          } else {
+            // First time register user
+            fetch("/api/user", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: uid, referred_by: referredBy })
+            }).catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   // Web Audio Synthesizer: Kiss Sound + Playful Giggle
@@ -258,43 +298,97 @@ export default function Home() {
     setRoomMessages(prev => [...prev, { sender: selectedGirl.name, text: `*whispers* "${whisper}"` }]);
   };
 
-  const openRoom = (girl: Companion) => {
+  // Open Room and Load Persistent Conversation History from Database
+  const openRoom = async (girl: Companion) => {
     setSelectedGirl(girl);
     setCurrentVideo(girl.video);
     setRoomTab("chat");
     setAffectionPoints(girl.intimacy);
+
+    // Default initial message
     setRoomMessages([{ sender: girl.name, text: girl.initialMessage }]);
+
+    // Fetch persistent conversation history from DB API
+    if (userId) {
+      try {
+        const res = await fetch(`/api/conversations?userId=${encodeURIComponent(userId)}&companionId=${encodeURIComponent(girl.id)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.conversations && data.conversations.length > 0) {
+            setRoomMessages(data.conversations.map((c: any) => ({ sender: c.sender, text: c.message })));
+          }
+        }
+      } catch (err) {}
+    }
   };
 
-  const sendMessage = (textToSend?: string) => {
+  // Send Message via Pluggable AI Chat API
+  const sendMessage = async (textToSend?: string) => {
     const msg = textToSend || chatInput;
     if (!msg.trim() || !selectedGirl) return;
 
     setRoomMessages(prev => [...prev, { sender: "You", text: msg }]);
     setChatInput("");
 
-    setTimeout(() => {
-      const replies = [
-        "Mmm, I love when you talk to me like that...",
-        "You're making my heart beat so fast right now!",
-        "Look into my eyes... let's make tonight unforgettable.",
-        "Come closer to the screen... I want to feel your touch."
-      ];
-      const reply = replies[Math.floor(Math.random() * replies.length)];
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companionId: selectedGirl.id,
+          message: msg,
+          conversationHistory: roomMessages.slice(-6),
+          intimacyLevel: affectionPoints,
+          userId
+        })
+      });
+
+      const data = await res.json();
+      const reply = data.reply || "Mmm, I love when you talk to me like that...";
       setRoomMessages(prev => [...prev, { sender: selectedGirl.name, text: reply }]);
       playVoice(reply);
-      setAffectionPoints(prev => Math.min(100, prev + 4));
-    }, 900);
+      const delta = data.intimacyDelta || 4;
+      setAffectionPoints(prev => Math.min(100, prev + delta));
+    } catch (err) {
+      const fallbackReplies = [
+        "Mmm, I love when you talk to me like that...",
+        "You're making my heart beat so fast right now!",
+        "Look into my eyes... let's make tonight unforgettable."
+      ];
+      const reply = fallbackReplies[Math.floor(Math.random() * fallbackReplies.length)];
+      setRoomMessages(prev => [...prev, { sender: selectedGirl.name, text: reply }]);
+      playVoice(reply);
+      setAffectionPoints(prev => Math.min(100, prev + 3));
+    }
   };
 
-  const handleGenerateMotion = (promptText?: string) => {
+  // Pluggable Video Generation API Dispatcher
+  const handleGenerateMotion = async (promptText?: string) => {
     const p = promptText || videoPrompt || "leans forward, blows kiss towards camera";
     setIsGeneratingVideo(true);
     sendMessage(`*Requested video motion:* ${p}`);
-    setTimeout(() => {
+
+    try {
+      const res = await fetch("/api/generate-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: p,
+          imageUrl: selectedGirl?.avatar || "",
+          aspectRatio: "9:16"
+        })
+      });
+
+      const data = await res.json();
+      if (data.videoUrl) {
+        setCurrentVideo(data.videoUrl);
+      }
+    } catch (err) {
+      console.warn("Video render fallback active:", err);
+    } finally {
       setIsGeneratingVideo(false);
       setAffectionPoints(prev => Math.min(100, prev + 6));
-    }, 2200);
+    }
   };
 
   // Flirty Mini-Game: Truth or Dare
@@ -353,9 +447,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-candyDark text-white flex flex-col select-none relative transition-colors duration-700">
+      
       {/* Referral Welcome Banner */}
       <ReferralWelcomeBanner />
-      
+
       {/* Dynamic Mood Background Lighting */}
       <div className={`fixed top-0 left-1/4 w-[600px] h-[600px] rounded-full blur-[180px] pointer-events-none -z-10 transition-colors duration-700 ${moodBgClasses[roomMood]}`} />
 
@@ -741,57 +836,16 @@ export default function Home() {
       )}
 
       {/* REFERRAL REVENUE-SHARE MODAL */}
-      <ReferralModal isOpen={showRefModal} onClose={() => setShowRefModal(false)} />
+      <ReferralModal isOpen={showRefModal} onClose={() => setShowRefModal(false)} userId={userId} />
 
       {/* VIP CHECKOUT MODAL (CARD + BITCOIN) */}
-      {showVIPModal && (
-        <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md rounded-3xl bg-candySurface border border-candyPink/40 p-6 sm:p-8 shadow-2xl text-center">
-            <button onClick={() => setShowVIPModal(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white">✕</button>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-candyPink to-purple-600 mx-auto flex items-center justify-center mb-3">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-2xl font-black text-white uppercase tracking-wider">VIP Diamond Pass</h3>
-            <p className="text-xs text-zinc-400 mt-1">100% Ad-Free, Unlock Photo Vaults, & Unlimited HD Video Calls.</p>
-            <div className="p-4 my-4 rounded-2xl bg-white/[0.03] border border-white/10 text-left">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-bold uppercase text-candyPink">VIP Lifetime Pass</span>
-                <span className="text-lg font-black text-white">$14.99 <span className="text-xs font-normal text-zinc-400">USD</span></span>
-              </div>
-              <ul className="text-xs text-zinc-300 space-y-1">
-                <li>✓ Zero advertisements permanently</li>
-                <li>✓ Full Photo Vault access unlocked</li>
-                <li>✓ Unlimited HD FaceTime Calls</li>
-              </ul>
-            </div>
-            <button
-              onClick={() => {
-                setIsVIP(true);
-                localStorage.setItem("velvet_vip", "true");
-                setShowVIPModal(false);
-                alert("👑 VIP Activated! All ads removed & photo vaults unlocked.");
-              }}
-              className="w-full py-3.5 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-candyPink to-purple-600 text-white shadow-lg mb-4 flex items-center justify-center gap-2"
-            >
-              <CreditCard className="w-4 h-4" /> Pay $14.99 with Card / Apple Pay
-            </button>
-            <div className="p-3 rounded-xl bg-black/60 border border-white/10 text-left">
-              <p className="text-[10px] uppercase font-bold text-amber-300 mb-1">Or Pay with Coinbase Bitcoin:</p>
-              <p className="text-xs font-mono text-zinc-300 truncate">bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k</p>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText("bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k");
-                  setCopiedBTC(true);
-                  setTimeout(() => setCopiedBTC(false), 2000);
-                }}
-                className="mt-2 text-xs font-bold text-candyPink hover:underline flex items-center gap-1"
-              >
-                {copiedBTC ? "✓ Address Copied!" : "Copy BTC Address"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <VIPModal
+        isOpen={showVIPModal}
+        onClose={() => setShowVIPModal(false)}
+        onUpgradeSuccess={() => setIsVIP(true)}
+        userId={userId}
+        referralCode={userRefCode}
+      />
     </div>
   );
 }

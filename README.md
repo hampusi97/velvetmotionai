@@ -1,11 +1,30 @@
 # 💋 VelvetMotion AI
 
-> **Turn Still Photos into Cinematic AI Videos guided by Prompts — Designed with Candy.ai Dark-Neon Aesthetics.**
+> **Full-Stack AI Companion Platform with Persistent Database Storage, Pluggable Neural Compute Backends & 30% Viral Rev-Share.**
 
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org)
 [![Deploy with Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhampusi97%2Fvelvetmotionai)
+
+---
+
+## 🏗️ Full-Stack Architecture
+
+### 1. Pluggable Serverless AI Endpoints
+- **`/api/chat`**: Standard OpenAI-compatible serverless route (`vLLM`, `Ollama`, `RunPod`, `OpenAI`). Configured via `AI_CHAT_ENDPOINT` and `AI_CHAT_API_KEY`. Features a resilient built-in companion personality fallback engine if compute is unreachable.
+- **`/api/generate-video`**: Pluggable video compute worker (`ComfyUI`, `Diffusers`, `fal.ai`, `Runway`, `Luma`). Configured via `AI_VIDEO_ENDPOINT` and `AI_VIDEO_API_KEY`.
+- **`/api/user`**: User profile, VIP status, and affiliate statistics synchronization.
+- **`/api/conversations`**: Persistent multi-session chat memory.
+- **`/api/vault`**: Exclusive photo vault unlocks tracking.
+- **`/api/webhooks/payment`**: Coinbase Commerce webhook processor verifying crypto transactions and executing automatic VIP upgrades & 30% rev-share ledger distribution.
+
+### 2. Database Schema (Supabase / PostgreSQL)
+Found in `supabase/schema.sql`:
+- `users`: User identity, Bitcoin wallet address, VIP status, referral code, referred by, and BTC/USD balance.
+- `conversations`: Persistent multi-companion chat logs.
+- `vault_unlocks`: Unlocked 4K photo access permissions.
+- `referral_ledger`: 30% affiliate commission ledger entries.
 
 ---
 

@@ -9,15 +9,16 @@ import {
 interface ReferralModalProps {
   isOpen: boolean;
   onClose: () => void;
+  userId?: string;
 }
 
-export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
+export function ReferralModal({ isOpen, onClose, userId }: ReferralModalProps) {
   const [copied, setCopied] = useState(false);
   const [userRefCode, setUserRefCode] = useState("");
   const [payoutBtc, setPayoutBtc] = useState("");
   const [isSaved, setIsSaved] = useState(false);
 
-  // Simulated Stats (stored in localStorage)
+  // Stats from backend API / Database
   const [stats, setStats] = useState({
     friendsInvited: 3,
     adViewsEarned: 142,
@@ -27,22 +28,35 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      let code = localStorage.getItem("velvet_my_ref_code");
-      if (!code) {
-        code = "user_" + Math.random().toString(36).substring(2, 7);
-        localStorage.setItem("velvet_my_ref_code", code);
-      }
-      setUserRefCode(code);
+      const currentUserId = userId || localStorage.getItem("velvet_user_id") || "user_" + Math.random().toString(36).substring(2, 7);
+      localStorage.setItem("velvet_user_id", currentUserId);
 
-      const savedBtc = localStorage.getItem("velvet_payout_btc");
-      if (savedBtc) setPayoutBtc(savedBtc);
-
-      const savedStats = localStorage.getItem("velvet_ref_stats");
-      if (savedStats) {
-        try { setStats(JSON.parse(savedStats)); } catch (e) {}
-      }
+      // Fetch or sync user stats from backend
+      fetch(`/api/user?userId=${encodeURIComponent(currentUserId)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.user) {
+            setUserRefCode(data.user.referral_code);
+            localStorage.setItem("velvet_my_ref_code", data.user.referral_code);
+            if (data.user.wallet_address) {
+              setPayoutBtc(data.user.wallet_address);
+            }
+          }
+          if (data.stats) {
+            setStats(data.stats);
+          }
+        })
+        .catch(() => {
+          // Fallback to local storage if API call fails
+          let code = localStorage.getItem("velvet_my_ref_code");
+          if (!code) {
+            code = "ref_" + currentUserId.slice(0, 6);
+            localStorage.setItem("velvet_my_ref_code", code);
+          }
+          setUserRefCode(code);
+        });
     }
-  }, []);
+  }, [userId]);
 
   if (!isOpen) return null;
 
@@ -55,10 +69,23 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSavePayout = (e: React.FormEvent) => {
+  const handleSavePayout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (typeof window !== "undefined") {
+      const currentUserId = userId || localStorage.getItem("velvet_user_id") || "guest";
       localStorage.setItem("velvet_payout_btc", payoutBtc);
+
+      try {
+        await fetch("/api/user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: currentUserId,
+            wallet_address: payoutBtc
+          })
+        });
+      } catch (err) {}
+
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2500);
     }
@@ -199,6 +226,19 @@ export function ReferralWelcomeBanner() {
       if (ref) {
         localStorage.setItem("velvet_referred_by", ref);
         setReferrer(ref);
+
+        // Notify backend of referred session
+        const currentUserId = localStorage.getItem("velvet_user_id") || "guest_" + Math.random().toString(36).substring(2, 7);
+        localStorage.setItem("velvet_user_id", currentUserId);
+
+        fetch("/api/user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: currentUserId,
+            referred_by: ref
+          })
+        }).catch(() => {});
       } else {
         const saved = localStorage.getItem("velvet_referred_by");
         if (saved) setReferrer(saved);
