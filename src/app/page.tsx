@@ -85,7 +85,22 @@ export default function Home() {
 
   // VIP Bitcoin Modal State
   const [isVIPOpen, setIsVIPOpen] = useState(false);
+  const [isVIP, setIsVIP] = useState(false);
   const [selectedGift, setSelectedGift] = useState<{ name: string; amount: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("velvet_vip_active");
+      if (saved === "true") setIsVIP(true);
+    }
+  }, []);
+
+  const handleUpgradeSuccess = () => {
+    setIsVIP(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("velvet_vip_active", "true");
+    }
+  };
 
   // Ambient Music State
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
@@ -387,12 +402,27 @@ export default function Home() {
             <span>Call {activePersona.name}</span>
           </button>
 
-          {/* VIP Bitcoin Button */}
+          {/* Free vs VIP Plan Badge */}
+          {isVIP ? (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-lg shadow-emerald-500/10">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> VIP Plan (No Ads)
+            </span>
+          ) : (
+            <button
+              onClick={() => setIsVIPOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs text-zinc-300 hover:border-neonPink transition-all"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span>Free Plan (With Ads)</span>
+            </button>
+          )}
+
+          {/* VIP Bitcoin & Card Button */}
           <button
             onClick={() => { setSelectedGift(null); setIsVIPOpen(true); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-neonPink/20 border border-amber-500/40 text-xs text-amber-300 font-bold hover:scale-105 transition-all shadow-lg shadow-amber-500/10"
           >
-            <Zap className="w-3.5 h-3.5 text-amber-300" /> VIP (BTC)
+            <Zap className="w-3.5 h-3.5 text-amber-300" /> VIP (BTC / Card)
           </button>
         </div>
       </header>
@@ -661,8 +691,8 @@ export default function Home() {
         </section>
       </main>
 
-      {/* Crypto & Bitcoin Ad Banner */}
-      <CryptoAdBanner />
+      {/* Crypto & Bitcoin Ad Banner (Hides when VIP) */}
+      <CryptoAdBanner isVIP={isVIP} />
 
       {/* Floating Ambient Synthwave Widget */}
       <div className="fixed bottom-5 right-5 z-40">
@@ -693,10 +723,11 @@ export default function Home() {
         </button>
       </div>
 
-      {/* VIP Bitcoin Modal */}
+      {/* VIP Bitcoin & Card Modal */}
       <VIPModal
         isOpen={isVIPOpen}
         onClose={() => setIsVIPOpen(false)}
+        onUpgradeSuccess={handleUpgradeSuccess}
         giftName={selectedGift?.name}
         giftAmount={selectedGift?.amount}
       />
