@@ -10,6 +10,8 @@ import {
   Paperclip, Shield, HardDrive, CheckCircle2
 } from "lucide-react";
 import { PermissionsModal } from "../components/PermissionsModal";
+import { ShareHubModal } from "../components/ShareHubModal";
+import { Link2 } from "lucide-react";
 import { saveCompanionMemory, loadCompanionMemory } from "../lib/db";
 
 const BTC_ADDRESS = "bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k";
@@ -121,6 +123,7 @@ export default function Home() {
 
   // Modals
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [showShareHub, setShowShareHub] = useState(false);
   const [showVIPModal, setShowVIPModal] = useState(false);
   const [isVIP, setIsVIP] = useState(false);
   const [copiedBTC, setCopiedBTC] = useState(false);
@@ -132,6 +135,26 @@ export default function Home() {
   // Welcome Kiss
   const [showIntro, setShowIntro] = useState(true);
   const [kissTriggered, setKissTriggered] = useState(false);
+
+  // Deep-Linking: Auto-opens companion or promo from shared URLs
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const girlParam = params.get("girl");
+      const promoParam = params.get("promo");
+
+      if (girlParam) {
+        const found = companions.find(c => c.id.toLowerCase() === girlParam.toLowerCase());
+        if (found) {
+          setSelectedGirl(found);
+        }
+      }
+
+      if (promoParam === "vip") {
+        setShowVIPModal(true);
+      }
+    }
+  }, [companions]);
 
   // Load IndexedDB chat memory on companion change
   useEffect(() => {
@@ -410,6 +433,15 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* 🔗 Shareable Links Generator */}
+          <button
+            onClick={() => setShowShareHub(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-600/15 border border-pink-500/40 text-pink-400 hover:bg-pink-600 hover:text-white text-xs font-bold transition-all"
+          >
+            <Link2 className="w-3.5 h-3.5" />
+            <span>Share Links</span>
+          </button>
+
           {/* Permissions & Memory Files Center */}
           <button
             onClick={() => setShowPermissionsModal(true)}
@@ -744,6 +776,12 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* SHAREABLE LINKS HUB MODAL */}
+      <ShareHubModal
+        isOpen={showShareHub}
+        onClose={() => setShowShareHub(false)}
+      />
 
       {/* PERMISSIONS & MEMORY FILE BACKUP MODAL */}
       <PermissionsModal
