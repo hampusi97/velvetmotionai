@@ -777,8 +777,149 @@ export default function Home() {
           </div>
         </aside>
 
-        {/* Center: Real-Time Chat Feed with Photo Uploading */}
-        <main className="flex-1 flex flex-col justify-between bg-[#0B0912]/80 relative overflow-hidden">
+        {/* Center: Explore Homescreen Grid OR Real-Time Chat Feed */}
+        {activeTab === "explore" ? (
+          <main className="flex-1 overflow-y-auto p-4 sm:p-8 bg-[#0B0912]/80">
+            <div className="max-w-6xl mx-auto space-y-6 pb-12">
+              {/* Homescreen Hero & Filter Bar */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-pink-950/40 via-purple-950/30 to-black/60 border border-pink-500/20 backdrop-blur-xl shadow-2xl">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-pink-400 bg-pink-500/10 px-2.5 py-0.5 rounded-full border border-pink-500/20">
+                      AI Companion Studio
+                    </span>
+                    <span className="text-xs text-emerald-400 font-mono">● {companions.length} Companions Online</span>
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                    Choose Your <span className="text-pink-500">Dream Companion</span>
+                  </h1>
+                  <p className="text-xs sm:text-sm text-zinc-300 max-w-xl leading-relaxed">
+                    Browse all authentic companion archetypes, enter private rooms for 1-on-1 calls and chat, or import any custom character card.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setShowImporterModal(true)}
+                    className="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-pink-600/30 transition-all active:scale-95"
+                  >
+                    <span>📥</span> Import AI Girl (.json)
+                  </button>
+                  <button
+                    onClick={() => setShowGramModal(true)}
+                    className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs flex items-center gap-2 transition-all active:scale-95"
+                  >
+                    <span>🎬</span> Reels Feed
+                  </button>
+                </div>
+              </div>
+
+              {/* Category Pills & Search */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+                  {["All", "Sweetheart", "Cyberpunk", "Anime", "Luxury", "Goth", "Fantasy", "Noir", "Athletic", "Royalty"].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
+                        selectedCategory === cat
+                          ? "bg-pink-600 text-white shadow-md shadow-pink-600/20"
+                          : "bg-white/[0.04] text-zinc-400 hover:text-white border border-white/5"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[200px]">
+                  <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search companions..."
+                    className="w-full bg-black/50 border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-pink-500"
+                  />
+                </div>
+              </div>
+
+              {/* Character Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                {companions
+                  .filter((girl) => {
+                    const matchesCat =
+                      selectedCategory === "All" ||
+                      girl.category.toLowerCase().includes(selectedCategory.toLowerCase()) ||
+                      girl.tags.some(t => t.toLowerCase().includes(selectedCategory.toLowerCase()));
+                    const matchesSearch =
+                      girl.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      girl.tagline.toLowerCase().includes(searchQuery.toLowerCase());
+                    return matchesCat && matchesSearch;
+                  })
+                  .map((girl) => (
+                    <div
+                      key={girl.id}
+                      onClick={() => {
+                        setSelectedGirl(girl);
+                        setActiveTab("chats");
+                      }}
+                      className="group relative rounded-3xl overflow-hidden border border-white/10 hover:border-pink-500/60 bg-[#0E0C15] transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-pink-600/10 cursor-pointer flex flex-col justify-between"
+                    >
+                      <div className="relative aspect-[3/4] w-full overflow-hidden bg-black">
+                        <img
+                          src={girl.avatar}
+                          alt={girl.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0E0C15] via-transparent to-black/30" />
+                        
+                        <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-pink-400 border border-pink-500/30">
+                            {girl.category}
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
+                          </span>
+                        </div>
+
+                        <div className="absolute bottom-3 left-3 right-3 space-y-1">
+                          <div className="flex items-baseline justify-between">
+                            <h3 className="text-lg font-black text-white">{girl.name}, {girl.age}</h3>
+                            <span className="text-[10px] text-pink-400 font-mono">Affection: {girl.intimacy}%</span>
+                          </div>
+                          <p className="text-xs text-zinc-300 line-clamp-2 leading-relaxed">
+                            {girl.tagline}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 bg-[#0E0C15] border-t border-white/[0.06] flex items-center justify-between">
+                        <div className="flex gap-1 overflow-hidden max-w-[60%]">
+                          {girl.tags.slice(0, 2).map((t, idx) => (
+                            <span key={idx} className="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.04] text-zinc-400 truncate">
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedGirl(girl);
+                            setActiveTab("chats");
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1 shrink-0"
+                        >
+                          Enter Room ➔
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </main>
+        ) : (
+          <main className="flex-1 flex flex-col justify-between bg-[#0B0912]/80 relative overflow-hidden">
           
           {/* Room Header */}
           <div className="h-16 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between bg-[#0E0C15]/50 backdrop-blur-md shrink-0">
@@ -956,9 +1097,10 @@ export default function Home() {
             </div>
           </div>
         </main>
+        )}
 
         {/* Right Drawer: Live Screen & Vault Photos */}
-        {showRightDrawer && (
+        {showRightDrawer && activeTab === "chats" && (
           <aside className="w-80 border-l border-white/[0.08] bg-[#0E0C15]/90 flex flex-col justify-between overflow-y-auto hidden lg:flex shrink-0 p-5 space-y-6">
             <div className="relative aspect-[9/12] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black">
               <video src={selectedGirl.video} autoPlay loop playsInline className="w-full h-full object-cover" />
