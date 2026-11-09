@@ -50,3 +50,15 @@ body {
 .animate-call-ring {
   animation: callPulse 1.8s infinite;
 }
+
+.candy-card {
+  background: rgba(18, 14, 28, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.candy-card:hover {
+  border-color: rgba(255, 0, 127, 0.4);
+  box-shadow: 0 10px 30px -10px rgba(255, 0, 127, 0.25);
+  transform: translateY(-2px);
+}
