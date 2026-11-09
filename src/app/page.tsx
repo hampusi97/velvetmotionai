@@ -225,6 +225,7 @@ export default function Home() {
   const [showShareHub, setShowShareHub] = useState(false);
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
   const [showVIPModal, setShowVIPModal] = useState(false);
+  const [showBrandMenu, setShowBrandMenu] = useState(false);
   const [isVIP, setIsVIP] = useState(false);
   const [copiedBTC, setCopiedBTC] = useState(false);
   const [userTotalSpent, setUserTotalSpent] = useState(25.0); // Default Bronze for testing
@@ -604,7 +605,7 @@ export default function Home() {
                   <Heart className="w-9 h-9 text-pink-500 animate-bounce fill-pink-500" />
                 </div>
               </div>
-              <h2 className="text-3xl font-black">VELVET<span className="text-pink-500">MOTION</span></h2>
+              <h2 className="text-3xl font-black tracking-tight">Velvet<span className="text-pink-500">Motion</span></h2>
               <p className="text-xs text-zinc-400 uppercase tracking-widest">Tap to enter private companion studio</p>
             </div>
           ) : (
@@ -626,15 +627,13 @@ export default function Home() {
             onClick={() => setActiveTab("explore")}
             className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-600 to-purple-600 p-[2px] cursor-pointer hover:scale-105 transition-transform"
           >
-            <div className="w-full h-full bg-[#07060A] rounded-[10px] flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-pink-500" />
-            </div>
+            <img src="/icon.svg" alt="" className="w-full h-full rounded-[10px]" />
           </div>
           <span
             onClick={() => setActiveTab("explore")}
             className="text-lg font-black tracking-tight cursor-pointer hover:opacity-90"
           >
-            VELVET<span className="text-pink-500">MOTION</span>
+            Velvet<span className="text-pink-500">Motion</span>
           </span>
 
           <nav className="flex items-center gap-1 bg-black/50 p-1 rounded-xl border border-white/10 ml-2">
@@ -646,7 +645,7 @@ export default function Home() {
                   : "text-zinc-400 hover:text-white"
               }`}
             >
-              🔥 Explore
+              Explore
             </button>
             <button
               onClick={() => setActiveTab("chats")}
@@ -656,68 +655,29 @@ export default function Home() {
                   : "text-zinc-400 hover:text-white"
               }`}
             >
-              💬 Private Room ({selectedGirl.name})
+              Room
             </button>
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* 👑 Hall of Fame & High-Roller Royalty Button */}
-          <button
-            onClick={() => setShowLoyaltyModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-amber-300 hover:scale-105 text-xs font-bold transition-all shadow-lg shadow-amber-500/10"
-          >
-            <Crown className="w-3.5 h-3.5 text-amber-400" />
-            <span>Hall of Fame (${userTotalSpent.toFixed(0)})</span>
-          </button>
-
-          {/* 🔗 Shareable Links Generator */}
-          <button
-            onClick={() => setShowShareHub(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-600/15 border border-pink-500/40 text-pink-400 hover:bg-pink-600 hover:text-white text-xs font-bold transition-all"
-          >
-            <Link2 className="w-3.5 h-3.5" />
-            <span>Share Links</span>
-          </button>
-
-          {/* 📥 Import AI Girl Universal Character Importer Button */}
-          <button
-            onClick={() => setShowImporterModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/50 text-pink-300 hover:bg-pink-600 hover:text-white text-xs font-bold transition-all shadow-md active:scale-95"
-          >
-            <span>📥</span> Import AI Girl
-          </button>
-
-          {/* 🎬 Velvet Gram Vertical Reels Button */}
-          <button
-            onClick={() => setShowGramModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-600/15 border border-pink-500/40 text-pink-400 hover:bg-pink-600 hover:text-white text-xs font-bold transition-all"
-          >
-            <span>🎬</span> Reels
-          </button>
-
-          {/* 🎰 Gacha Capsule Machine Button */}
-          <button
-            onClick={() => setShowGachaModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600/15 border border-purple-500/40 text-purple-400 hover:bg-purple-600 hover:text-white text-xs font-bold transition-all"
-          >
-            <span>🎰</span> Gacha (💎{gemsCount})
-          </button>
-
-          {/* Permissions & Memory Files Center */}
-          <button
-            onClick={() => setShowPermissionsModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 hover:border-pink-500 text-xs text-zinc-300 transition-all active:scale-95"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Permissions &amp; Files</span>
-          </button>
-
-          <button
-            onClick={() => setShowVIPModal(true)}
-            className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-xs font-bold text-white shadow-lg active:scale-95"
-          >
-            <Zap className="w-3.5 h-3.5 inline mr-1" /> VIP Pass
+        <div className="relative flex items-center gap-2">
+          <div className={`${showBrandMenu ? "flex" : "hidden"} xl:flex absolute right-0 top-12 z-40 w-52 flex-col gap-2 rounded-2xl border border-white/10 bg-[#0E0C15] p-3 shadow-2xl xl:static xl:w-auto xl:flex-row xl:items-center xl:border-0 xl:bg-transparent xl:p-0 xl:shadow-none`}>
+            <button onClick={() => { setShowLoyaltyModal(true); setShowBrandMenu(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold">
+              <Crown className="w-3.5 h-3.5 text-amber-400" /> Hall
+            </button>
+            <button onClick={() => { setShowShareHub(true); setShowBrandMenu(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-pink-500/40 text-pink-300 text-xs font-bold">
+              <Link2 className="w-3.5 h-3.5" /> Share
+            </button>
+            <button onClick={() => { setShowImporterModal(true); setShowBrandMenu(false); }} className="px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-zinc-200">Import</button>
+            <button onClick={() => { setShowGramModal(true); setShowBrandMenu(false); }} className="px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-zinc-200">Reels</button>
+            <button onClick={() => { setShowGachaModal(true); setShowBrandMenu(false); }} className="px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-zinc-200">Gacha</button>
+            <button onClick={() => { setShowPermissionsModal(true); setShowBrandMenu(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 text-xs text-zinc-300">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Files
+            </button>
+          </div>
+          <button type="button" onClick={() => setShowBrandMenu((open) => !open)} className="xl:hidden px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-zinc-200">More</button>
+          <button onClick={() => setShowVIPModal(true)} className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-xs font-bold text-white shadow-lg">
+            <Zap className="w-3.5 h-3.5 inline mr-1" /> VIP
           </button>
         </div>
       </header>
@@ -789,7 +749,7 @@ export default function Home() {
           </div>
 
           <div className="p-3 border-t border-white/[0.08] bg-black/40 text-xs flex justify-between items-center">
-            <span className="text-zinc-400 flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5 text-pink-500" /> IndexedDB Active</span>
+            <span className="text-zinc-400 tracking-wide">VelvetMotion</span>
             <span className="text-[10px] text-emerald-400 font-mono">Unlimited</span>
           </div>
         </aside>
@@ -808,10 +768,10 @@ export default function Home() {
                     <span className="text-xs text-emerald-400 font-mono">● {companions.length} Companions Online</span>
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                    Choose Your <span className="text-pink-500">Dream Companion</span>
+                    The Velvet<span className="text-pink-500">Motion</span> room
                   </h1>
                   <p className="text-xs sm:text-sm text-zinc-300 max-w-xl leading-relaxed">
-                    Browse all authentic companion archetypes, enter private rooms for 1-on-1 calls and chat, or import any custom character card.
+                    Pick someone, open a private room, and keep the conversation on this device.
                   </p>
                 </div>
 

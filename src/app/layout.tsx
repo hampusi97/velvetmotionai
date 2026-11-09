@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VelvetMotion AI - Turn Photos into Cinematic Videos",
-  description: "Ultra-luxury companion studio with HD voice calls, motion video, and photo vaults.",
+  title: "VelvetMotion",
+  description: "A private companion studio. Twelve rooms, one wordmark, nothing uploaded that you do not send.",
   manifest: "/manifest.json",
+  icons: { icon: "/icon.svg", apple: "/icon.svg" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -21,7 +22,8 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="theme-color" content="#FF007F" />
-        <link rel="apple-touch-icon" href="/manifest.json" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/icon.svg" />
       </head>
       <body className="bg-midnight min-h-screen text-slate-100 selection:bg-neonPink selection:text-white">
         <div className="fixed top-0 left-1/4 -z-10 h-96 w-96 rounded-full bg-neonPurple/15 blur-[120px] pointer-events-none" />
