@@ -11,15 +11,36 @@ import {
 } from "lucide-react";
 import { PermissionsModal } from "../components/PermissionsModal";
 import { VelvetGramModal } from "../components/VelvetGramModal";
-import { GachaMachineModal } from "../components/GachaMachineModal";
 import { CharacterImporterModal, ImportedCompanion } from "../components/CharacterImporterModal";
 import { ShareHubModal } from "../components/ShareHubModal";
 import { ReengagementEngine } from "../components/ReengagementEngine";
-import { VIPLoyaltyModal } from "../components/VIPLoyaltyModal";
-import { Link2, Crown, Trophy, ArrowLeft } from "lucide-react";
+import { Link2, ArrowLeft } from "lucide-react";
 import { saveCompanionMemory, loadCompanionMemory } from "../lib/db";
 
-const BTC_ADDRESS = "bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k";
+function readFacts(id: string) {
+  const raw = localStorage.getItem(`velvet_memory_${id}`);
+  if (!raw) return [] as string[];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string").slice(0, 8) : [];
+  } catch {
+    return [] as string[];
+  }
+}
+
+function localReply(backstory: string, facts: string[], userText: string) {
+  const story = backstory.trim();
+  const fact = facts[0];
+  const asked = /who are you|about you|your story|remember/i.test(userText);
+  if (asked && story) return story.slice(0, 280);
+  if (asked && fact) return `I still have this, and I will not drop it: ${fact}.`;
+  const lines = [
+    fact ? `I keep coming back to this: ${fact}.` : "I'm here. Tell me one thing worth keeping.",
+    story ? `That still has to fit this: ${story.slice(0, 160)}` : "Say it again if you want me to keep it.",
+    fact ? `You asked me to hold onto ${fact}. I am still holding it.` : "Nothing leaves this phone unless Live model is on.",
+  ];
+  return lines[userText.length % lines.length];
+}
 
 interface Message {
   id: string;
@@ -44,6 +65,7 @@ interface Companion {
   intimacy: number;
   vaultPhotos: string[];
   voice?: { label: string; pitch: number; rate: number };
+  backstory?: string;
 }
 
 const VOICES = [
@@ -212,12 +234,8 @@ export default function Home() {
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [showGramModal, setShowGramModal] = useState(false);
   const [showImporterModal, setShowImporterModal] = useState(false);
-  const [showGachaModal, setShowGachaModal] = useState(false);
-  const [gemsCount, setGemsCount] = useState(65);
   const [activeDateScenario, setActiveDateScenario] = useState<{ scene: string; choices: string[] } | null>(null);
   const [showShareHub, setShowShareHub] = useState(false);
-  const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
-  const [showVIPModal, setShowVIPModal] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const [memory, setMemory] = useState<string[]>([]);
   const [memoryDraft, setMemoryDraft] = useState("");
@@ -226,27 +244,10 @@ export default function Home() {
   const [buildLook, setBuildLook] = useState(LOOKS[0].id);
   const [buildVoice, setBuildVoice] = useState(VOICES[0].label);
   const [buildLine, setBuildLine] = useState("");
-  const [isVIP, setIsVIP] = useState(false);
-  const [copiedBTC, setCopiedBTC] = useState(false);
-  const [userTotalSpent, setUserTotalSpent] = useState(25.0); // Default Bronze for testing
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedSpent = localStorage.getItem("velvet_total_spent");
-      if (savedSpent) setUserTotalSpent(parseFloat(savedSpent));
-    }
-  }, []);
-
-  const handleDeposit = (amount: number) => {
-    const updated = userTotalSpent + amount;
-    setUserTotalSpent(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("velvet_total_spent", updated.toString());
-      localStorage.setItem("velvet_vip", "true");
-    }
-    setIsVIP(true);
-    alert(`🎉 Deposit received! You are now at $${updated.toFixed(2)} total spent.`);
-  };
+  const [buildStory, setBuildStory] = useState("");
+  const [backstory, setBackstory] = useState("");
+  const [backstoryDraft, setBackstoryDraft] = useState("");
+  const [liveModel, setLiveModel] = useState(false);
 
   // FaceTime Simulator
   const [isCalling, setIsCalling] = useState(false);
@@ -277,24 +278,29 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    setLiveModel(localStorage.getItem("velvet_live_model") === "1");
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem("velvet_active", selectedGirl.id);
-    const raw = localStorage.getItem(`velvet_memory_${selectedGirl.id}`);
-    if (!raw) {
-      setMemory([]);
-      return;
-    }
-    try {
-      const parsed = JSON.parse(raw);
-      setMemory(Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string").slice(0, 12) : []);
-    } catch {
-      setMemory([]);
-    }
+    const facts = readFacts(selectedGirl.id);
+    setMemory(facts);
+    const story = localStorage.getItem(`velvet_backstory_${selectedGirl.id}`) || selectedGirl.backstory || "";
+    setBackstory(story);
+    setBackstoryDraft(story);
   }, [selectedGirl.id]);
 
   const writeMemory = (next: string[]) => {
-    const trimmed = next.slice(0, 12);
+    const trimmed = next.slice(0, 8);
     setMemory(trimmed);
     localStorage.setItem(`velvet_memory_${selectedGirl.id}`, JSON.stringify(trimmed));
+  };
+
+  const saveBackstory = (text: string) => {
+    const trimmed = text.trim().slice(0, 600);
+    setBackstory(trimmed);
+    setBackstoryDraft(trimmed);
+    localStorage.setItem(`velvet_backstory_${selectedGirl.id}`, trimmed);
   };
 
   const createCompanion = () => {
@@ -303,6 +309,7 @@ export default function Home() {
     const age = Math.min(45, Math.max(21, Number(buildAge) || 24));
     const name = buildName.trim() || "Vesper";
     const line = buildLine.trim() || "Tell me one thing you want me to keep.";
+    const story = buildStory.trim().slice(0, 600);
     const companion: Companion = {
       id: `own_${Date.now()}`,
       name,
@@ -317,7 +324,9 @@ export default function Home() {
       intimacy: 40,
       vaultPhotos: [look.src],
       voice,
+      backstory: story,
     };
+    localStorage.setItem(`velvet_backstory_${companion.id}`, story);
     setCompanions((prev) => {
       const next = [companion, ...prev];
       localStorage.setItem(
@@ -336,7 +345,6 @@ export default function Home() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const girlParam = params.get("girl");
-      const promoParam = params.get("promo");
 
       if (girlParam) {
         const found = companions.find(c => c.id.toLowerCase() === girlParam.toLowerCase());
@@ -344,38 +352,47 @@ export default function Home() {
           setSelectedGirl(found);
         }
       }
-
-      if (promoParam === "vip") {
-        setShowVIPModal(true);
-      }
     }
   }, [companions]);
 
   // Load IndexedDB chat memory on companion change
   useEffect(() => {
     async function loadMemory() {
-      const savedVIP = localStorage.getItem("velvet_vip");
-      if (savedVIP === "true") setIsVIP(true);
-
       const saved = await loadCompanionMemory(selectedGirl.id);
+      let next: Message[] = [];
       if (saved && saved.length > 0) {
-        setMessages(saved);
+        next = saved;
       } else {
-        // Check localStorage fallback
         const mem = localStorage.getItem(`chat_mem_${selectedGirl.id}`);
         if (mem) {
           try {
-            setMessages(JSON.parse(mem));
-            return;
-          } catch (e) {}
+            next = JSON.parse(mem);
+          } catch (e) {
+            next = [];
+          }
         }
-        setMessages([{
-          id: "m_init",
-          sender: "companion",
-          text: selectedGirl.initialMessage,
-          timestamp: "Just now"
-        }]);
+        if (next.length === 0) {
+          next = [{
+            id: "m_init",
+            sender: "companion",
+            text: selectedGirl.initialMessage,
+            timestamp: "Just now"
+          }];
+        }
       }
+      const facts = readFacts(selectedGirl.id);
+      const day = new Date().toISOString().slice(0, 10);
+      const wroteKey = `velvet_wrote_${selectedGirl.id}_${day}`;
+      if (facts[0] && !localStorage.getItem(wroteKey)) {
+        localStorage.setItem(wroteKey, "1");
+        next = [...next, {
+          id: `first_${Date.now()}`,
+          sender: "companion" as const,
+          text: `Before you say anything: I still have this. ${facts[0]}.`,
+          timestamp: "Just now",
+        }];
+      }
+      setMessages(next);
     }
     loadMemory();
   }, [selectedGirl]);
@@ -419,6 +436,17 @@ export default function Home() {
     setInputText("");
     setIsTyping(true);
 
+    if (!liveModel) {
+      const reply = localReply(backstory, memory, text);
+      setMessages((prev) => [
+        ...prev,
+        { id: `c_${Date.now()}`, sender: "companion", text: reply, timestamp: "Just now" },
+      ]);
+      playVoice(reply);
+      setIsTyping(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -428,6 +456,7 @@ export default function Home() {
           message: text,
           intimacyLevel: selectedGirl.intimacy,
           memories: memory,
+          backstory,
           conversationHistory: history.slice(-8).map((item) => ({
             sender: item.sender === "user" ? "user" : "companion",
             text: item.text,
@@ -738,23 +767,15 @@ export default function Home() {
 
         <div className="relative flex items-center gap-2">
           <div className={`${showBrandMenu ? "flex" : "hidden"} xl:flex absolute right-0 top-12 z-40 w-52 flex-col gap-2 rounded-2xl border border-white/10 bg-[#0E0C15] p-3 shadow-2xl xl:static xl:w-auto xl:flex-row xl:items-center xl:border-0 xl:bg-transparent xl:p-0 xl:shadow-none`}>
-            <button onClick={() => { setShowLoyaltyModal(true); setShowBrandMenu(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold">
-              <Crown className="w-3.5 h-3.5 text-amber-400" /> Hall
-            </button>
             <button onClick={() => { setShowShareHub(true); setShowBrandMenu(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-pink-500/40 text-pink-300 text-xs font-bold">
               <Link2 className="w-3.5 h-3.5" /> Share
             </button>
             <button onClick={() => { setShowImporterModal(true); setShowBrandMenu(false); }} className="px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-zinc-200">Import</button>
-            <button onClick={() => { setShowGramModal(true); setShowBrandMenu(false); }} className="px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-zinc-200">Reels</button>
-            <button onClick={() => { setShowGachaModal(true); setShowBrandMenu(false); }} className="px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-zinc-200">Gacha</button>
             <button onClick={() => { setShowPermissionsModal(true); setShowBrandMenu(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 text-xs text-zinc-300">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Files
             </button>
           </div>
           <button type="button" onClick={() => setShowBrandMenu((open) => !open)} className="xl:hidden px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-zinc-200">More</button>
-          <button onClick={() => setShowVIPModal(true)} className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-xs font-bold text-white shadow-lg">
-            <Zap className="w-3.5 h-3.5 inline mr-1" /> VIP
-          </button>
         </div>
       </header>
 
@@ -847,7 +868,7 @@ export default function Home() {
                     The Velvet<span className="text-pink-500">Motion</span> room
                   </h1>
                   <p className="text-xs sm:text-sm text-zinc-300 max-w-xl leading-relaxed">
-                    Pick someone, open a private room, and keep the conversation on this device.
+                    Pick one person. Her face, her backstory, and this chat stay on this device. A reply only leaves the phone if you turn Live model on.
                   </p>
                 </div>
 
@@ -1007,10 +1028,15 @@ export default function Home() {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={startCall}
-                className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5"
+                type="button"
+                onClick={() => {
+                  const next = !liveModel;
+                  setLiveModel(next);
+                  localStorage.setItem("velvet_live_model", next ? "1" : "0");
+                }}
+                className={`px-3.5 py-1.5 rounded-full border text-xs font-bold ${liveModel ? "border-amber-400 text-amber-200" : "border-emerald-500/40 text-emerald-300"}`}
               >
-                <Phone className="w-3.5 h-3.5 animate-pulse" /> Video Call
+                {liveModel ? "Live model on" : "On this device"}
               </button>
               <button
                 onClick={() => setShowRightDrawer(!showRightDrawer)}
@@ -1023,7 +1049,9 @@ export default function Home() {
 
           <div className="lg:hidden border-b border-white/10 px-4 py-3 space-y-2">
             <p className="text-[11px] font-bold text-zinc-300">With {selectedGirl.name}. What she keeps</p>
-            <p className="text-[11px] text-zinc-400">{memory.length ? memory.join(" · ") : "Nothing saved yet."}</p>
+            <p className="text-[11px] text-zinc-500">{liveModel ? "Live model sends this reply to the server." : "This chat stays on this device."}</p>
+            <textarea value={backstoryDraft} onChange={(event) => setBackstoryDraft(event.target.value)} placeholder="Backstory she cannot drop" rows={2} className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white" />
+            <button type="button" onClick={() => saveBackstory(backstoryDraft)} className="rounded-xl border border-white/10 px-3 py-1 text-[11px] text-zinc-200">Save backstory</button>
             <form
               className="flex gap-2"
               onSubmit={(event) => {
@@ -1128,24 +1156,6 @@ export default function Home() {
               >
                 🥂 Start Date Scenario
               </button>
-              <button
-                onClick={handleRequestSelfie}
-                className="px-3 py-1.5 rounded-full bg-pink-600/15 border border-pink-500/30 text-pink-400 hover:bg-pink-600 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
-              >
-                <Sparkles className="w-3.5 h-3.5" /> Request Her Selfie
-              </button>
-              <button
-                onClick={() => handleRequestVideo("blow a kiss")}
-                className="px-3 py-1.5 rounded-full bg-purple-600/15 border border-purple-500/30 text-purple-400 hover:bg-purple-600 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
-              >
-                <Video className="w-3.5 h-3.5" /> Blow Kiss Video
-              </button>
-              <button
-                onClick={() => setShowVIPModal(true)}
-                className="px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 shrink-0"
-              >
-                <Gift className="w-3.5 h-3.5" /> Send BTC Rose
-              </button>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1203,6 +1213,12 @@ export default function Home() {
 
             {/* Intimacy / Affection Progress Bar */}
             <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
+              <p className="text-xs font-bold text-zinc-300">Backstory she cannot drop</p>
+              <textarea value={backstoryDraft} onChange={(event) => setBackstoryDraft(event.target.value)} rows={3} placeholder="Who she is. She does not contradict this." className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white" />
+              <button type="button" onClick={() => saveBackstory(backstoryDraft)} className="rounded-xl bg-white px-3 py-1.5 text-[11px] font-bold text-black">Save backstory</button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
               <p className="text-xs font-bold text-zinc-300">What she keeps</p>
               {memory.length === 0 ? (
                 <p className="text-[11px] text-zinc-500">Nothing yet. Add a fact and she can use it.</p>
@@ -1242,27 +1258,6 @@ export default function Home() {
                     <img src={img} alt="Vault" className="w-full h-full object-cover" />
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* Virtual Bitcoin Gifts (Funding bc1qjmf...) */}
-            <div className="space-y-2 pt-2 border-t border-white/[0.08]">
-              <span className="text-xs font-bold text-zinc-300 block">Send Virtual Gift:</span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setShowVIPModal(true)}
-                  className="p-2.5 rounded-xl bg-white/[0.03] hover:bg-pink-600/20 border border-white/10 text-left transition-all"
-                >
-                  <span className="text-xs block">🌹 Rose</span>
-                  <span className="text-[10px] text-zinc-500">0.00005 BTC</span>
-                </button>
-                <button
-                  onClick={() => setShowVIPModal(true)}
-                  className="p-2.5 rounded-xl bg-white/[0.03] hover:bg-purple-600/20 border border-white/10 text-left transition-all"
-                >
-                  <span className="text-xs block">🍾 VIP Bubbly</span>
-                  <span className="text-[10px] text-zinc-500">0.0001 BTC</span>
-                </button>
               </div>
             </div>
           </aside>
@@ -1314,6 +1309,7 @@ export default function Home() {
             <input value={buildName} onChange={(event) => setBuildName(event.target.value)} placeholder="Name" className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-sm" />
             <input value={buildAge} onChange={(event) => setBuildAge(event.target.value)} inputMode="numeric" placeholder="Age, 21 or older" className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-sm" />
             <textarea value={buildLine} onChange={(event) => setBuildLine(event.target.value)} placeholder="One line about her" className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-sm" rows={2} />
+            <textarea value={buildStory} onChange={(event) => setBuildStory(event.target.value)} placeholder="Backstory she cannot contradict" className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-sm" rows={3} />
             <div className="flex gap-2 overflow-x-auto">
               {LOOKS.map((look) => (
                 <button type="button" key={look.id} onClick={() => setBuildLook(look.id)} className={`shrink-0 rounded-xl border p-1 ${buildLook === look.id ? "border-pink-500" : "border-white/10"}`}>
@@ -1339,14 +1335,6 @@ export default function Home() {
         onClose={() => setShowShareHub(false)}
       />
 
-      {/* HIGH-ROLLER VIP LOYALTY & HALL OF FAME MODAL */}
-      <VIPLoyaltyModal
-        isOpen={showLoyaltyModal}
-        onClose={() => setShowLoyaltyModal(false)}
-        userTotalSpent={userTotalSpent}
-        onSimulateDeposit={handleDeposit}
-      />
-
       {/* UNIVERSAL AI CHARACTER IMPORTER MODAL */}
       <CharacterImporterModal
         isOpen={showImporterModal}
@@ -1364,23 +1352,6 @@ export default function Home() {
         }}
       />
 
-      {/* CYBERPUNK MYSTERY GACHA CAPSULE MACHINE */}
-      <GachaMachineModal
-        isOpen={showGachaModal}
-        onClose={() => setShowGachaModal(false)}
-        gemsCount={gemsCount}
-        onSpendGems={(amt) => {
-          if (gemsCount >= amt) {
-            setGemsCount(prev => prev - amt);
-            return true;
-          }
-          return false;
-        }}
-        onWinPrize={(prize) => {
-          alert(`🎉 Congratulations! You won: ${prize}`);
-        }}
-      />
-
       {/* PERMISSIONS & MEMORY FILE BACKUP MODAL */}
       <PermissionsModal
         isOpen={showPermissionsModal}
@@ -1390,56 +1361,6 @@ export default function Home() {
           if (data && data.messages) setMessages(data.messages);
         }}
       />
-
-      {/* VIP MODAL */}
-      {showVIPModal && (
-        <div className="fixed inset-0 z-[170] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md rounded-3xl bg-[#120E1C] border border-pink-500/40 p-6 sm:p-8 shadow-2xl text-center">
-            <button onClick={() => setShowVIPModal(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white">✕</button>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-pink-600 to-purple-600 mx-auto flex items-center justify-center mb-3">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-2xl font-black text-white uppercase tracking-wider">VIP Diamond Pass</h3>
-            <p className="text-xs text-zinc-400 mt-1">100% Ad-Free, Unlimited HD Companion Calls, & Photo Vaults.</p>
-            <div className="p-4 my-4 rounded-2xl bg-white/[0.03] border border-white/10 text-left">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-bold uppercase text-pink-500">VIP Lifetime Pass</span>
-                <span className="text-lg font-black text-white">$14.99 <span className="text-xs font-normal text-zinc-400">USD</span></span>
-              </div>
-              <ul className="text-xs text-zinc-300 space-y-1">
-                <li>✓ Zero advertisements permanently</li>
-                <li>✓ Full Photo Vault access unlocked</li>
-                <li>✓ Unlimited HD FaceTime Calls</li>
-              </ul>
-            </div>
-            <button
-              onClick={() => {
-                setIsVIP(true);
-                localStorage.setItem("velvet_vip", "true");
-                setShowVIPModal(false);
-                alert("👑 VIP Activated! All ads removed & photo vaults unlocked.");
-              }}
-              className="w-full py-3.5 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg mb-4 flex items-center justify-center gap-2"
-            >
-              <CreditCard className="w-4 h-4" /> Pay $14.99 with Card / Apple Pay
-            </button>
-            <div className="p-3 rounded-xl bg-black/60 border border-white/10 text-left">
-              <p className="text-[10px] uppercase font-bold text-amber-300 mb-1">Or Pay with Coinbase Bitcoin:</p>
-              <p className="text-xs font-mono text-zinc-300 truncate">{BTC_ADDRESS}</p>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(BTC_ADDRESS);
-                  setCopiedBTC(true);
-                  setTimeout(() => setCopiedBTC(false), 2000);
-                }}
-                className="mt-2 text-xs font-bold text-pink-400 hover:underline flex items-center gap-1"
-              >
-                {copiedBTC ? "✓ Address Copied!" : "Copy BTC Address"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );

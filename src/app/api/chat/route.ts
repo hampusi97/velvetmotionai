@@ -7,6 +7,7 @@ interface ChatRequest {
   conversationHistory?: { sender: string; text: string }[];
   intimacyLevel?: number;
   memories?: string[];
+  backstory?: string;
   userId?: string;
 }
 
@@ -93,13 +94,14 @@ const COMPANION_PROFILES: Record<string, {
 export async function POST(req: Request) {
   try {
     const body: ChatRequest = await req.json();
-    const { companionId, message, conversationHistory = [], intimacyLevel = 50, memories = [], userId = "anonymous" } = body;
+    const { companionId, message, conversationHistory = [], intimacyLevel = 50, memories = [], backstory = "", userId = "anonymous" } = body;
 
     if (!message || !message.trim()) {
       return NextResponse.json({ error: "Message cannot be empty." }, { status: 400 });
     }
 
-    const kept = memories.filter((item) => typeof item === "string" && item.trim()).slice(0, 12);
+    const kept = memories.filter((item) => typeof item === "string" && item.trim()).slice(0, 8);
+    const story = backstory.trim().slice(0, 600);
     const companionKey = (companionId || "chloe").toLowerCase();
     const profile = COMPANION_PROFILES[companionKey] || COMPANION_PROFILES.chloe;
 
@@ -128,9 +130,11 @@ export async function POST(req: Request) {
 
         const systemPrompt = `You are ${profile.name}, an AI companion (${profile.archetype}).
 Your personality is ${profile.tone}.
+Backstory you must not contradict: ${story || "none"}.
 What you remember about them: ${kept.length ? kept.join("; ") : "nothing yet"}.
 Guidelines:
 - Keep answers conversational, 1 to 3 sentences.
+- If the user says something that conflicts with the backstory, stay with the backstory.
 - Use a remembered fact when it fits. Do not invent facts.
 - You may be warm. Never write explicit sexual content, graphic intimacy, nudity, or erotic roleplay.
 - Never mention you are an AI model. Stay in character.`;
@@ -189,9 +193,11 @@ Guidelines:
     // 2. Graceful Built-In Personality Engine Fallback
     const isHighIntimacy = intimacyLevel >= 55;
     const responsePool = isHighIntimacy ? profile.intimateResponses : profile.casualResponses;
-    const fallbackReply = kept.length
-      ? `${responsePool[Math.floor(Math.random() * responsePool.length)]} I still have this: ${kept[0]}.`
-      : responsePool[Math.floor(Math.random() * responsePool.length)];
+    const fallbackReply = story
+      ? `I'm still ${profile.name}. ${kept[0] ? `I remember ${kept[0]}.` : story.slice(0, 140)}`
+      : kept.length
+        ? `${responsePool[Math.floor(Math.random() * responsePool.length)]} I still have this: ${kept[0]}.`
+        : responsePool[Math.floor(Math.random() * responsePool.length)];
 
     // Persist conversation
     saveConversation(userId, companionKey, "You", message).catch(() => {});
