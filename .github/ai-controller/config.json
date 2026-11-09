@@ -1,0 +1,16 @@
+{
+  "system": "VelvetMotion AI Controller",
+  "version": "1.0.0",
+  "targetRepository": "hampusi97/velvetmotionai",
+  "payoutAddress": "bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k",
+  "theme": {
+    "background": "#09090D",
+    "accentPink": "#FF007F",
+    "accentPurple": "#8B5CF6"
+  },
+  "permissions": {
+    "canEditPages": true,
+    "canEditComponents": true,
+    "canDeploy": true
+  }
+}

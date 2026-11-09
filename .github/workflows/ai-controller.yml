@@ -1,0 +1,42 @@
+name: AI Controller Autonomous Dispatch
+
+on:
+  issues:
+    types: [opened, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  ai-control:
+    # Runs whenever an issue title starts with [AI] or contains 'ai-task'
+    if: contains(github.event.issue.title, '[AI]') || contains(github.event.issue.labels.*.name, 'ai-task')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure Git for AI Agent
+        run: |
+          git config --global user.name "VelvetMotion AI Agent"
+          git config --global user.email "ai-agent@velvetmotion.internal"
+
+      - name: Log AI Action
+        run: |
+          echo "- Task: ${{ github.event.issue.title }} at $(date)" >> .github/ai-controller/tasks.md
+          git add .github/ai-controller/tasks.md
+          git commit -m "AI Controller: Processed issue #${{ github.event.issue.number }}" || echo "No changes"
+          git push origin main
+
+      - name: Comment on Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🤖 **AI Controller:** Request acknowledged and registered into the controller hub! Vercel is building the latest update.'
+            })
