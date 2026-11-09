@@ -9,7 +9,7 @@
 }
 
 body {
-  background-color: #07060A;
+  background-color: #060509;
   color: #FFFFFF;
   font-family: var(--font-sans);
   overflow-x: hidden;
@@ -20,7 +20,7 @@ body {
   color: #FFFFFF;
 }
 
-/* Candy.ai Card Glassmorphism */
+/* Candy Glass Cards */
 .candy-card {
   background: rgba(18, 14, 28, 0.7);
   backdrop-filter: blur(20px);
@@ -32,27 +32,25 @@ body {
 .candy-card:hover {
   transform: translateY(-4px);
   border-color: rgba(255, 0, 127, 0.5);
-  box-shadow: 0 12px 35px -8px rgba(255, 0, 127, 0.3);
+  box-shadow: 0 12px 35px -8px rgba(255, 0, 127, 0.35);
 }
 
-/* Neon Glow Accents */
-.glow-pink {
-  box-shadow: 0 0 25px rgba(255, 0, 127, 0.45);
-}
-
-.glow-purple {
-  box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
+/* Story Ring Glow */
+.story-ring {
+  background: linear-gradient(45deg, #FF007F, #D946EF, #8B5CF6);
+  padding: 2px;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #07060A;
+  background: #060509;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2A223E;
+  background: #231C33;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {

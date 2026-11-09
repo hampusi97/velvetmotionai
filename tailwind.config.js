@@ -4,12 +4,11 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        candyDark: "#07060A",
-        candySurface: "#120E1C",
+        candyDark: "#060509",
+        candySurface: "#110D1D",
         candyBorder: "rgba(255, 255, 255, 0.08)",
         candyPink: "#FF007F",
-        candyViolet: "#8B5CF6",
-        candyPurple: "#6D28D9",
+        candyPurple: "#8B5CF6",
         neonPink: "#FF007F",
         neonPurple: "#8B5CF6",
         neonFuchsia: "#D946EF",
