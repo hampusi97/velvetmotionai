@@ -102,21 +102,35 @@ export async function POST(req: Request) {
     const profile = COMPANION_PROFILES[companionKey] || COMPANION_PROFILES.chloe;
 
     // 1. Try Pluggable OpenAI-Compatible Backend if configured
-    const endpoint = process.env.AI_CHAT_ENDPOINT;
-    const apiKey = process.env.AI_CHAT_API_KEY || "dummy";
-    const model = process.env.AI_CHAT_MODEL || "gpt-3.5-turbo";
+    const xaiKey = (process.env.XAI_API_KEY || "").trim();
+    const chatKey = (process.env.AI_CHAT_API_KEY || "").trim();
+    const keyIsReal = (key: string) =>
+      key.length > 20 && !/dummy|your_ai_chat_api_key|changeme|placeholder/i.test(key);
 
-    if (endpoint) {
+    let endpoint = "";
+    let configuredKey = "";
+    let model = process.env.AI_CHAT_MODEL || "";
+    if (keyIsReal(xaiKey)) {
+      endpoint = "https://api.x.ai/v1/chat/completions";
+      configuredKey = xaiKey;
+      model = model || "grok-4.5";
+    } else if (keyIsReal(chatKey) && process.env.AI_CHAT_ENDPOINT) {
+      endpoint = process.env.AI_CHAT_ENDPOINT;
+      configuredKey = chatKey;
+      model = model || "gpt-4o-mini";
+    }
+
+    if (endpoint && configuredKey) {
       try {
         const fullUrl = endpoint.endsWith("/chat/completions") ? endpoint : `${endpoint.replace(/\/+$/, "")}/chat/completions`;
 
         const systemPrompt = `You are ${profile.name}, an AI companion (${profile.archetype}).
 Your personality is ${profile.tone}.
-Current intimacy level with user: ${intimacyLevel}/100.
+Current closeness with the user: ${intimacyLevel}/100.
 Guidelines:
-- Keep answers engaging, conversational, immersive, and intimate (1-3 sentences).
-- Respond in character using natural voice and subtle emotes (*smiles*, *blushes*, *whispers*).
-- Never mention you are an AI model or language model. Stay completely in character.`;
+- Keep answers conversational, 1 to 3 sentences.
+- You may be warm and affectionate. Never write explicit sexual content, graphic intimacy, nudity, or erotic roleplay.
+- Never mention you are an AI model. Stay in character.`;
 
         const formattedMessages = [
           { role: "system", content: systemPrompt },
@@ -134,7 +148,7 @@ Guidelines:
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
+            "Authorization": `Bearer ${configuredKey}`
           },
           body: JSON.stringify({
             model,

@@ -16,7 +16,7 @@ import { CharacterImporterModal, ImportedCompanion } from "../components/Charact
 import { ShareHubModal } from "../components/ShareHubModal";
 import { ReengagementEngine } from "../components/ReengagementEngine";
 import { VIPLoyaltyModal } from "../components/VIPLoyaltyModal";
-import { Link2, Crown, Trophy } from "lucide-react";
+import { Link2, Crown, Trophy, ArrowLeft } from "lucide-react";
 import { saveCompanionMemory, loadCompanionMemory } from "../lib/db";
 
 const BTC_ADDRESS = "bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k";
@@ -327,9 +327,9 @@ export default function Home() {
   };
 
   // Send Text Message
-  const handleSend = (overrideText?: string) => {
-    const text = overrideText || inputText;
-    if (!text.trim()) return;
+  const handleSend = async (overrideText?: string) => {
+    const text = (overrideText || inputText).trim();
+    if (!text || isTyping) return;
 
     const userMsg: Message = {
       id: `u_${Date.now()}`,
@@ -338,27 +338,44 @@ export default function Home() {
       timestamp: "Just now"
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    const history = [...messages, userMsg];
+    setMessages(history);
     setInputText("");
     setIsTyping(true);
 
-    setTimeout(() => {
-      setIsTyping(false);
-      const responses = [
-        `*smiles warmly at you* Mmm, I was just thinking about you... you always know what to say.`,
-        `*blushes and looks into your eyes* My heart beats so fast whenever you message me, handsome!`,
-        `*leans in closer* Come closer... tell me everything about your day.`
-      ];
-      const reply = responses[Math.floor(Math.random() * responses.length)];
-      const compMsg: Message = {
-        id: `c_${Date.now()}`,
-        sender: "companion",
-        text: reply,
-        timestamp: "Just now"
-      };
-      setMessages(prev => [...prev, compMsg]);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companionId: selectedGirl.id,
+          message: text,
+          intimacyLevel: selectedGirl.intimacy,
+          conversationHistory: history.slice(-8).map((item) => ({
+            sender: item.sender === "user" ? "user" : "companion",
+            text: item.text,
+          })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const reply =
+        typeof data.reply === "string" && data.reply.trim()
+          ? data.reply.trim()
+          : "I lost that for a second. Say it once more?";
+      setMessages((prev) => [
+        ...prev,
+        { id: `c_${Date.now()}`, sender: "companion", text: reply, timestamp: "Just now" },
+      ]);
       playVoice(reply.replace(/\*.*?\*/g, ""));
-    }, 1100);
+    } catch {
+      const reply = "The line went quiet. Try once more.";
+      setMessages((prev) => [
+        ...prev,
+        { id: `c_${Date.now()}`, sender: "companion", text: reply, timestamp: "Just now" },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   // Create an original fictional companion inspired by photo aesthetics
@@ -923,7 +940,15 @@ export default function Home() {
           
           {/* Room Header */}
           <div className="h-16 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between bg-[#0E0C15]/50 backdrop-blur-md shrink-0">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab("explore")}
+                aria-label="Back"
+                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 text-white flex items-center justify-center shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
               <img src={selectedGirl.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover border-2 border-pink-500" />
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
