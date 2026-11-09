@@ -39,7 +39,7 @@ interface Companion {
 }
 
 export default function Home() {
-  const companions: Companion[] = [
+  const defaultCompanions: Companion[] = [
     {
       id: "chloe",
       name: "Chloe",
@@ -109,8 +109,9 @@ export default function Home() {
   ];
 
   // Active Companion & Navigation
+  const [companions, setCompanions] = useState<Companion[]>(defaultCompanions);
   const [activeTab, setActiveTab] = useState<"chats" | "explore">("chats");
-  const [selectedGirl, setSelectedGirl] = useState<Companion>(companions[0]);
+  const [selectedGirl, setSelectedGirl] = useState<Companion>(defaultCompanions[0]);
   const [showRightDrawer, setShowRightDrawer] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
@@ -216,6 +217,40 @@ export default function Home() {
       setMessages(prev => [...prev, compMsg]);
       playVoice(reply.replace(/\*.*?\*/g, ""));
     }, 1100);
+  };
+
+  // Create an original fictional companion inspired by photo aesthetics
+  const handleCreateFromAesthetic = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const previewUrl = URL.createObjectURL(file);
+
+      const aestheticStyles = [
+        { name: "Seraphina", archetype: "Vintage Glamour", tag: "Golden Hour, Silk Dress, Film Grain" },
+        { name: "Nova", archetype: "Neon Cyberpunk", tag: "Rainy City, Leather Jacket, Neon Reflections" },
+        { name: "Kaia", archetype: "Boho Minimalist", tag: "Cozy Knitwear, Warm Sunlight, Studio Portrait" }
+      ];
+      const style = aestheticStyles[Math.floor(Math.random() * aestheticStyles.length)];
+
+      const newCompanion: Companion = {
+        id: `style_${Date.now()}`,
+        name: style.name,
+        age: 22,
+        tagline: `Original character inspired by ${style.archetype} aesthetic`,
+        category: "Sweetheart",
+        avatar: previewUrl,
+        video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        voiceIntro: `Hello! I'm an original companion inspired by your aesthetic photo.`,
+        initialMessage: `I love the style and mood of the photo you shared! What should we explore together?`,
+        tags: ["Style-Inspired", style.archetype, "Original"],
+        intimacy: 50,
+        vaultPhotos: [previewUrl]
+      };
+
+      setCompanions(prev => [newCompanion, ...prev]);
+      setSelectedGirl(newCompanion);
+      alert(`✨ Created new original companion: ${style.name} (${style.archetype})!`);
+    }
   };
 
   // User Uploads Photo from Their Gallery into Chat
@@ -550,6 +585,10 @@ export default function Home() {
           <div className="p-3 sm:p-4 bg-[#0E0C15]/80 border-t border-white/[0.08] space-y-2.5">
             
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+              <label className="px-3 py-1.5 rounded-full bg-purple-600/20 border border-purple-500/40 text-purple-300 hover:bg-purple-600 hover:text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shrink-0">
+                <span>🎨</span> Style to Companion
+                <input type="file" accept="image/*" onChange={handleCreateFromAesthetic} className="hidden" />
+              </label>
               <button
                 onClick={() => galleryInputRef.current?.click()}
                 className="px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-black text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
