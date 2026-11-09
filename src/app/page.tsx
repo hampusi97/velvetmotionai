@@ -361,6 +361,28 @@ export default function Home() {
     }
   };
 
+  // Import Character Card (Character.ai, TavernAI, Chub, or Viral Templates)
+  const handleImportCompanion = (imported: ImportedCompanion) => {
+    const newComp: Companion = {
+      id: imported.id,
+      name: imported.name,
+      age: imported.age,
+      tagline: imported.tagline,
+      category: imported.category,
+      avatar: imported.avatar,
+      video: imported.video || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      voiceIntro: imported.voiceIntro || `Hey there, I am ${imported.name}. Welcome to our private chamber.`,
+      initialMessage: imported.initialMessage,
+      tags: imported.tags || ["Imported", "VIP"],
+      intimacy: imported.intimacy || 70,
+      vaultPhotos: imported.vaultPhotos || [imported.avatar]
+    };
+    setCompanions(prev => [newComp, ...prev]);
+    setSelectedGirl(newComp);
+    setActiveTab("chats");
+    setShowImporterModal(false);
+  };
+
   // Trigger Interactive Branching Date Scenario
   const handleStartDateScenario = () => {
     const scenarios = [
@@ -537,6 +559,14 @@ export default function Home() {
             <span>Share Links</span>
           </button>
 
+          {/* 📥 Import AI Girl Universal Character Importer Button */}
+          <button
+            onClick={() => setShowImporterModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/50 text-pink-300 hover:bg-pink-600 hover:text-white text-xs font-bold transition-all shadow-md active:scale-95"
+          >
+            <span>📥</span> Import AI Girl
+          </button>
+
           {/* 🎬 Velvet Gram Vertical Reels Button */}
           <button
             onClick={() => setShowGramModal(true)}
@@ -596,6 +626,12 @@ export default function Home() {
                   <Flame className="w-3.5 h-3.5" /> Explore
                 </button>
               </div>
+              <button
+                onClick={() => setShowImporterModal(true)}
+                className="w-full mt-2 py-2 px-3 rounded-xl bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/30 text-pink-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+              >
+                <span>📥</span> Import AI Character (.json)
+              </button>
             </div>
 
             <div className="p-2 space-y-1 overflow-y-auto max-h-[calc(100vh-220px)]">
@@ -924,6 +960,13 @@ export default function Home() {
         onClose={() => setShowLoyaltyModal(false)}
         userTotalSpent={userTotalSpent}
         onSimulateDeposit={handleDeposit}
+      />
+
+      {/* UNIVERSAL AI CHARACTER IMPORTER MODAL */}
+      <CharacterImporterModal
+        isOpen={showImporterModal}
+        onClose={() => setShowImporterModal(false)}
+        onImport={handleImportCompanion}
       />
 
       {/* VELVET GRAM VERTICAL REELS MODAL */}
