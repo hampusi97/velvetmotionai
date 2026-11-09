@@ -1,167 +1,120 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { VIPModal, LiveBitcoinAdSlot, BTC_PAYOUT_ADDRESS } from "../components/Monetization";
-import { ReferralModal, ReferralWelcomeBanner } from "../components/ReferralSystem";
-import { InstallAppModal } from "../components/InstallAppModal";
-import { AuthModal } from "../components/AuthModal";
 import { 
   Heart, Sparkles, Phone, PhoneOff, Gift, MessageCircle, Play, 
   Download, Wand2, RefreshCw, Zap, Volume2, ShieldCheck, 
   CreditCard, ExternalLink, QrCode, Copy, Check, X, Search, 
   Image as ImageIcon, PlusCircle, Video, Send, ChevronRight,
-  Flame, Moon, Sun, Activity, HelpCircle
+  Flame, Moon, Sun, Camera, Mic, MoreVertical, SlidersHorizontal, Lock, CheckCircle2
 } from "lucide-react";
+
+const BTC_ADDRESS = "bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k";
+
+interface Message {
+  id: string;
+  sender: "user" | "companion";
+  text: string;
+  type?: "text" | "voice" | "selfie" | "video";
+  mediaUrl?: string;
+  timestamp: string;
+}
 
 interface Companion {
   id: string;
   name: string;
   age: number;
   tagline: string;
-  type: "realistic" | "anime";
   category: string;
   avatar: string;
   video: string;
   voiceIntro: string;
   initialMessage: string;
-  touchWhispers: string[];
   tags: string[];
   intimacy: number;
   vaultPhotos: string[];
 }
 
 export default function Home() {
-  // User Session & Persistence
-  const [userId, setUserId] = useState<string>("");
-  const [userRefCode, setUserRefCode] = useState<string>("");
-
-  // Intro Kiss & Giggle
-  const [showIntro, setShowIntro] = useState(true);
-  const [kissTriggered, setKissTriggered] = useState(false);
-  const [kissImpact, setKissImpact] = useState(false);
-
-  // Room Mood Lighting: neon | candlelight | midnight
-  const [roomMood, setRoomMood] = useState<"neon" | "candlelight" | "midnight">("neon");
-  const [asmrMode, setAsmrMode] = useState(false);
-
-  // Touch Feedback Coordinates
-  const [touchRipples, setTouchRipples] = useState<{ id: number; x: number; y: number }[]>([]);
-
-  // Companions Catalog
-  const defaultCompanions: Companion[] = [
+  const companions: Companion[] = [
     {
       id: "chloe",
       name: "Chloe",
       age: 21,
       tagline: "Your sweet college tutor who secretly has a crush on you...",
-      type: "realistic",
       category: "Sweetheart",
       avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=80",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
-      voiceIntro: "Hey there! I finished my session early just so we could talk.",
-      initialMessage: "I was hoping you'd come see me today. What are you thinking about?",
-      touchWhispers: [
-        "Mmm... your touch sends shivers down my spine...",
-        "Don't stop... I love feeling this close to you.",
-        "You always know how to make my heart race, handsome."
-      ],
+      voiceIntro: "Hey handsome! I was hoping you'd come message me today.",
+      initialMessage: "I finished my study session early just so we could talk. Tell me, what's on your mind?",
       tags: ["College", "Sweet", "Romantic"],
       intimacy: 75,
       vaultPhotos: [
         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80"
-      ]
-    },
-    {
-      id: "asuka",
-      name: "Asuka",
-      age: 20,
-      tagline: "Feisty anime waifu streamer who pretends she doesn't care about you b-baka!",
-      type: "anime",
-      category: "Tsundere",
-      avatar: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1000&q=80",
-      video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-      voiceIntro: "It's not like I wanted you to click on me or anything! But... sit next to me.",
-      initialMessage: "Hmph, you took forever to message me! What were you doing that was more important than me?",
-      touchWhispers: [
-        "B-baka! Why are you touching me there?! ...Don't let go though.",
-        "My heart isn't beating fast for you or anything, idiot!",
-        "Mmm... fine, you can hold me a little closer."
-      ],
-      tags: ["Anime", "Tsundere", "Streamer"],
-      intimacy: 60,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
-      ]
-    },
-    {
-      id: "sienna",
-      name: "Sienna",
-      age: 24,
-      tagline: "High-fashion French model vacationing on a private yacht in Monaco.",
-      type: "realistic",
-      category: "Luxury",
-      avatar: "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=1000&q=80",
-      video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-      voiceIntro: "Pour some champagne darling, you have my full attention tonight.",
-      initialMessage: "The Mediterranean breeze is intoxicating. Come sit with me on the deck?",
-      touchWhispers: [
-        "Mmm, darling... you have very persuasive hands.",
-        "Champagne and your touch... the ultimate combination tonight.",
-        "Look into my eyes... let's forget the rest of the world."
-      ],
-      tags: ["Luxury", "Glamour", "French"],
-      intimacy: 55,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80"
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"
       ]
     },
     {
       id: "elena",
       name: "Elena",
       age: 22,
-      tagline: "Cyberpunk street racer who only shows her vulnerable side when alone with you.",
-      type: "realistic",
+      tagline: "Cyberpunk street racer who only opens up to you.",
       category: "Edgy",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-      voiceIntro: "Hey trouble. Ready to hit the neon streets tonight?",
+      voiceIntro: "Hey trouble. Ready to hit the neon streets with me?",
       initialMessage: "Hop in. Let's get out of this rainy city and find somewhere quiet.",
-      touchWhispers: [
-        "Careful... you're playing with fire, handsome.",
-        "Mmm... I only let you get this close to me.",
-        "Feel that adrenaline? That's all because of you."
-      ],
       tags: ["Cyberpunk", "Edgy", "Rebel"],
-      intimacy: 65,
+      intimacy: 60,
       vaultPhotos: [
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
+      ]
+    },
+    {
+      id: "aria",
+      name: "Aria",
+      age: 20,
+      tagline: "Tokyo gamer girl & anime streamer who gets shy on camera.",
+      category: "Anime",
+      avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1000&q=80",
+      video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+      voiceIntro: "You finally joined my stream! I made this private room just for you.",
+      initialMessage: "I put on my favorite oversized hoodie. Come sit right next to me?",
+      tags: ["Anime", "Gamer", "Playful"],
+      intimacy: 85,
+      vaultPhotos: [
         "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"
+      ]
+    },
+    {
+      id: "sienna",
+      name: "Sienna",
+      age: 24,
+      tagline: "High-fashion French model vacationing on a yacht in Monaco.",
+      category: "Luxury",
+      avatar: "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=1000&q=80",
+      video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      voiceIntro: "Pour some champagne darling, you have my full attention tonight.",
+      initialMessage: "The Mediterranean breeze is intoxicating. Come sit with me on the deck?",
+      tags: ["Luxury", "Glamour", "French"],
+      intimacy: 50,
+      vaultPhotos: [
+        "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80"
       ]
     }
   ];
 
-  const [companions, setCompanions] = useState<Companion[]>(defaultCompanions);
-  const [activeTypeTab, setActiveTypeTab] = useState<"all" | "realistic" | "anime">("all");
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
+  // App Navigation & Active Companion
+  const [activeTab, setActiveTab] = useState<"chats" | "explore">("chats");
+  const [selectedGirl, setSelectedGirl] = useState<Companion>(companions[0]);
+  const [showRightDrawer, setShowRightDrawer] = useState(true);
 
-  // Room State
-  const [selectedGirl, setSelectedGirl] = useState<Companion | null>(null);
-  const [roomTab, setRoomTab] = useState<"chat" | "vault" | "video">("chat");
-  const [roomMessages, setRoomMessages] = useState<{ sender: string; text: string }[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
-  const [videoPrompt, setVideoPrompt] = useState("");
-  const [currentVideo, setCurrentVideo] = useState("");
-  const [affectionPoints, setAffectionPoints] = useState(65);
-
-  // Dynamic Heartbeat BPM
-  const heartBPM = Math.min(130, Math.floor(75 + affectionPoints * 0.55));
+  // Chat Stream & Memory
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   // FaceTime Simulator
   const [isCalling, setIsCalling] = useState(false);
@@ -170,265 +123,148 @@ export default function Home() {
   // VIP & Monetization
   const [isVIP, setIsVIP] = useState(false);
   const [showVIPModal, setShowVIPModal] = useState(false);
-  const [showRefModal, setShowRefModal] = useState(false);
-  const [showInstallModal, setShowInstallModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
+  const [copiedBTC, setCopiedBTC] = useState(false);
 
-  // Initialize and Sync Session with Persistent Backend Database
+  // Welcome Kiss
+  const [showIntro, setShowIntro] = useState(true);
+  const [kissTriggered, setKissTriggered] = useState(false);
+
+  // Load chat memory for selected companion
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedUser = localStorage.getItem("velvet_user");
-      if (savedUser) {
-        try {
-          setCurrentUser(JSON.parse(savedUser));
-        } catch (e) {}
-      }
-
-      let uid = localStorage.getItem("velvet_user_id");
-      if (!uid) {
-        uid = "u_" + Math.random().toString(36).substring(2, 9);
-        localStorage.setItem("velvet_user_id", uid);
-      }
-      setUserId(uid);
-
       const savedVIP = localStorage.getItem("velvet_vip");
       if (savedVIP === "true") setIsVIP(true);
 
-      const referredBy = localStorage.getItem("velvet_referred_by") || undefined;
-
-      // Sync user profile with database
-      fetch(`/api/user?userId=${encodeURIComponent(uid)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.user) {
-            if (data.user.is_vip) {
-              setIsVIP(true);
-              localStorage.setItem("velvet_vip", "true");
-            }
-            if (data.user.referral_code) {
-              setUserRefCode(data.user.referral_code);
-              localStorage.setItem("velvet_my_ref_code", data.user.referral_code);
-            }
-          } else {
-            // First time register user
-            fetch("/api/user", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: uid, referred_by: referredBy })
-            }).catch(() => {});
-          }
-        })
-        .catch(() => {});
+      const mem = localStorage.getItem(`chat_mem_${selectedGirl.id}`);
+      if (mem) {
+        try {
+          setMessages(JSON.parse(mem));
+          return;
+        } catch (e) {}
+      }
+      // Default initial message
+      const init: Message[] = [
+        {
+          id: "m_init",
+          sender: "companion",
+          text: selectedGirl.initialMessage,
+          timestamp: "Just now"
+        }
+      ];
+      setMessages(init);
     }
-  }, []);
+  }, [selectedGirl]);
 
-  // Web Audio Synthesizer: Kiss Sound + Playful Giggle
-  const triggerKissAndGiggleAudio = () => {
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        const ctx = new AudioCtx();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.setValueAtTime(750, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(280, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.35, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.19);
+  // Save chat to localStorage on changes
+  useEffect(() => {
+    if (messages.length > 0 && typeof window !== "undefined") {
+      localStorage.setItem(`chat_mem_${selectedGirl.id}`, JSON.stringify(messages));
+      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, selectedGirl]);
 
-        // Giggle sequence
-        [0.25, 0.40, 0.55].forEach((delay, i) => {
-          const gOsc = ctx.createOscillator();
-          const gGain = ctx.createGain();
-          gOsc.type = "sine";
-          gOsc.frequency.setValueAtTime(520 + i * 40, ctx.currentTime + delay);
-          gOsc.frequency.exponentialRampToValueAtTime(640 + i * 40, ctx.currentTime + delay + 0.08);
-          gGain.gain.setValueAtTime(0.08, ctx.currentTime + delay);
-          gGain.gain.exponentialRampToValueAtTime(0.005, ctx.currentTime + delay + 0.09);
-          gOsc.connect(gGain);
-          gGain.connect(ctx.destination);
-          gOsc.start(ctx.currentTime + delay);
-          gOsc.stop(ctx.currentTime + delay + 0.10);
-        });
-      }
-
-      if ("speechSynthesis" in window) {
-        setTimeout(() => {
-          const u = new SpeechSynthesisUtterance("Mmm... welcome to VelvetMotion, handsome.");
-          u.pitch = 1.25;
-          u.rate = 0.90;
-          window.speechSynthesis.speak(u);
-        }, 600);
-      }
-    } catch (e) {}
-  };
-
-  const handleEnterIntro = () => {
-    setKissTriggered(true);
-    setTimeout(() => {
-      setKissImpact(true);
-      triggerKissAndGiggleAudio();
-    }, 400);
-
-    setTimeout(() => {
-      setShowIntro(false);
-    }, 2600);
-  };
-
-  // Voice speech synthesis (supports ASMR whisper mode)
+  // Voice Note Synthesis
   const playVoice = (phrase: string) => {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(phrase);
-      u.pitch = asmrMode ? 1.4 : 1.2;
-      u.rate = asmrMode ? 0.78 : 0.95;
+      u.pitch = 1.2;
+      u.rate = 0.95;
       window.speechSynthesis.speak(u);
     }
   };
 
-  // Tactile Touch Reaction on the Companion Display
-  const handleTouchCompanion = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!selectedGirl) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+  // Send Message
+  const handleSend = (overrideText?: string) => {
+    const text = overrideText || inputText;
+    if (!text.trim()) return;
 
-    const newRipple = { id: Date.now(), x, y };
-    setTouchRipples(prev => [...prev.slice(-4), newRipple]);
-    setTimeout(() => setTouchRipples(prev => prev.filter(r => r.id !== newRipple.id)), 700);
+    const userMsg: Message = {
+      id: `u_${Date.now()}`,
+      sender: "user",
+      text,
+      timestamp: "Just now"
+    };
 
-    // Random sensual touch whisper
-    const whisper = selectedGirl.touchWhispers[Math.floor(Math.random() * selectedGirl.touchWhispers.length)];
-    playVoice(whisper);
-    setAffectionPoints(prev => Math.min(100, prev + 3));
+    setMessages(prev => [...prev, userMsg]);
+    setInputText("");
+    setIsTyping(true);
 
-    // Add whisper to chat
-    setRoomMessages(prev => [...prev, { sender: selectedGirl.name, text: `*whispers* "${whisper}"` }]);
-  };
-
-  // Open Room and Load Persistent Conversation History from Database
-  const openRoom = async (girl: Companion) => {
-    setSelectedGirl(girl);
-    setCurrentVideo(girl.video);
-    setRoomTab("chat");
-    setAffectionPoints(girl.intimacy);
-
-    // Default initial message
-    setRoomMessages([{ sender: girl.name, text: girl.initialMessage }]);
-
-    // Fetch persistent conversation history from DB API
-    if (userId) {
-      try {
-        const res = await fetch(`/api/conversations?userId=${encodeURIComponent(userId)}&companionId=${encodeURIComponent(girl.id)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.conversations && data.conversations.length > 0) {
-            setRoomMessages(data.conversations.map((c: any) => ({ sender: c.sender, text: c.message })));
-          }
-        }
-      } catch (err) {}
-    }
-  };
-
-  // Send Message via Pluggable AI Chat API
-  const sendMessage = async (textToSend?: string) => {
-    const msg = textToSend || chatInput;
-    if (!msg.trim() || !selectedGirl) return;
-
-    setRoomMessages(prev => [...prev, { sender: "You", text: msg }]);
-    setChatInput("");
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companionId: selectedGirl.id,
-          message: msg,
-          conversationHistory: roomMessages.slice(-6),
-          intimacyLevel: affectionPoints,
-          userId
-        })
-      });
-
-      const data = await res.json();
-      const reply = data.reply || "Mmm, I love when you talk to me like that...";
-      setRoomMessages(prev => [...prev, { sender: selectedGirl.name, text: reply }]);
-      playVoice(reply);
-      const delta = data.intimacyDelta || 4;
-      setAffectionPoints(prev => Math.min(100, prev + delta));
-    } catch (err) {
-      const fallbackReplies = [
-        "Mmm, I love when you talk to me like that...",
-        "You're making my heart beat so fast right now!",
-        "Look into my eyes... let's make tonight unforgettable."
+    // Companion Response
+    setTimeout(() => {
+      setIsTyping(false);
+      const responses = [
+        `*smiles warmly at you* Mmm, I love hearing from you... tell me more, handsome.`,
+        `*blushes and tucks hair behind ear* You always make my heart beat faster when you message me!`,
+        `*leans in closer* Come closer to the screen... I want to look into your eyes.`
       ];
-      const reply = fallbackReplies[Math.floor(Math.random() * fallbackReplies.length)];
-      setRoomMessages(prev => [...prev, { sender: selectedGirl.name, text: reply }]);
-      playVoice(reply);
-      setAffectionPoints(prev => Math.min(100, prev + 3));
-    }
+      const reply = responses[Math.floor(Math.random() * responses.length)];
+      const compMsg: Message = {
+        id: `c_${Date.now()}`,
+        sender: "companion",
+        text: reply,
+        timestamp: "Just now"
+      };
+      setMessages(prev => [...prev, compMsg]);
+      playVoice(reply.replace(/\*.*?\*/g, ""));
+    }, 1100);
   };
 
-  // Pluggable Video Generation API Dispatcher
-  const handleGenerateMotion = async (promptText?: string) => {
-    const p = promptText || videoPrompt || "leans forward, blows kiss towards camera";
-    setIsGeneratingVideo(true);
-    sendMessage(`*Requested video motion:* ${p}`);
+  // Request In-Chat Selfie Photo
+  const handleRequestSelfie = () => {
+    const selfieMsg: Message = {
+      id: `u_selfie_${Date.now()}`,
+      sender: "user",
+      text: "Can you send me a private selfie?",
+      timestamp: "Just now"
+    };
+    setMessages(prev => [...prev, selfieMsg]);
+    setIsTyping(true);
 
-    try {
-      const res = await fetch("/api/generate-video", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: p,
-          imageUrl: selectedGirl?.avatar || "",
-          aspectRatio: "9:16"
-        })
-      });
-
-      const data = await res.json();
-      if (data.videoUrl) {
-        setCurrentVideo(data.videoUrl);
-      }
-    } catch (err) {
-      console.warn("Video render fallback active:", err);
-    } finally {
-      setIsGeneratingVideo(false);
-      setAffectionPoints(prev => Math.min(100, prev + 6));
-    }
+    setTimeout(() => {
+      setIsTyping(false);
+      const randomPhoto = selectedGirl.vaultPhotos[Math.floor(Math.random() * selectedGirl.vaultPhotos.length)];
+      const photoMsg: Message = {
+        id: `c_selfie_${Date.now()}`,
+        sender: "companion",
+        text: "*snaps a quick photo for you* Here you go, handsome! Do you like how I look today?",
+        type: "selfie",
+        mediaUrl: randomPhoto,
+        timestamp: "Just now"
+      };
+      setMessages(prev => [...prev, photoMsg]);
+      playVoice("Here you go, handsome! Do you like how I look today?");
+    }, 1600);
   };
 
-  // Flirty Mini-Game: Truth or Dare
-  const handleFlirtyGame = (type: "truth" | "dare") => {
-    if (!selectedGirl) return;
-    const truths = [
-      "Tell me your deepest fantasy with me...",
-      "What was the first thing you noticed about me when you opened my room?",
-      "If we were alone in my private suite right now, what would you do first?"
-    ];
-    const dares = [
-      "I dare you to tell me three things you love about my voice...",
-      "I dare you to order me a virtual rose and watch my reaction!",
-      "I dare you to ask me for a video motion where I whisper a secret to you."
-    ];
-    const question = type === "truth"
-      ? truths[Math.floor(Math.random() * truths.length)]
-      : dares[Math.floor(Math.random() * dares.length)];
+  // Request Video Motion
+  const handleRequestVideo = (motionType: string) => {
+    const reqMsg: Message = {
+      id: `u_vid_${Date.now()}`,
+      sender: "user",
+      text: `Can you ${motionType} for me on video?`,
+      timestamp: "Just now"
+    };
+    setMessages(prev => [...prev, reqMsg]);
+    setIsTyping(true);
 
-    setRoomMessages(prev => [
-      ...prev,
-      { sender: selectedGirl.name, text: `🎲 *${type.toUpperCase()}!* ${question}` }
-    ]);
-    playVoice(question);
+    setTimeout(() => {
+      setIsTyping(false);
+      const vidMsg: Message = {
+        id: `c_vid_${Date.now()}`,
+        sender: "companion",
+        text: `*renders video clip* Anything for you! Look at my new video motion clip:`,
+        type: "video",
+        mediaUrl: selectedGirl.video,
+        timestamp: "Just now"
+      };
+      setMessages(prev => [...prev, vidMsg]);
+      playVoice("Anything for you! Watch my new video motion clip.");
+    }, 2000);
   };
 
+  // FaceTime Call
   const startCall = () => {
-    if (!selectedGirl) return;
     setIsCalling(true);
     setCallConnected(false);
     setTimeout(() => {
@@ -443,449 +279,480 @@ export default function Home() {
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   };
 
-  const filteredCompanions = companions.filter(c => {
-    const matchesType = activeTypeTab === "all" || c.type === activeTypeTab;
-    const matchesCat = activeCategory === "All" || c.category === activeCategory;
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesType && matchesCat && matchesSearch;
-  });
-
-  // Dynamic Mood Styles
-  const moodBgClasses = {
-    neon: "bg-candyPink/10",
-    candlelight: "bg-amber-500/15",
-    midnight: "bg-indigo-900/20"
-  };
-
   return (
-    <div className="min-h-screen bg-candyDark text-white flex flex-col select-none relative transition-colors duration-700">
+    <div className="h-screen w-screen bg-[#07060A] text-white flex flex-col overflow-hidden select-none relative font-sans">
       
-      {/* Referral Welcome Banner */}
-      <ReferralWelcomeBanner />
+      {/* Ambient Radial Lights */}
+      <div className="fixed top-0 left-1/3 w-[600px] h-[600px] bg-pink-600/10 rounded-full blur-[180px] pointer-events-none -z-10 animate-glow" />
 
-      {/* Dynamic Mood Background Lighting */}
-      <div className={`fixed top-0 left-1/4 w-[600px] h-[600px] rounded-full blur-[180px] pointer-events-none -z-10 transition-colors duration-700 ${moodBgClasses[roomMood]}`} />
-
-      {/* 💋 WELCOME KISS SCREEN */}
+      {/* 💋 INTRO KISS SCREEN */}
       {showIntro && (
         <div
-          onClick={handleEnterIntro}
-          className={`fixed inset-0 z-[200] flex flex-col items-center justify-center cursor-pointer transition-opacity duration-1000 ${
-            kissImpact ? "bg-black/85 backdrop-blur-3xl" : "bg-black/95 backdrop-blur-2xl"
-          }`}
+          onClick={() => {
+            setKissTriggered(true);
+            setTimeout(() => setShowIntro(false), 1600);
+          }}
+          className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center cursor-pointer p-4"
         >
           {!kissTriggered ? (
-            <div className="text-center z-10 px-6 animate-pulse flex flex-col items-center gap-5">
-              <div className="w-24 h-24 rounded-full p-[2px] bg-gradient-to-tr from-candyPink via-pink-600 to-purple-600 shadow-2xl shadow-candyPink/50">
-                <div className="w-full h-full rounded-full bg-candyDark flex items-center justify-center">
-                  <Heart className="w-10 h-10 text-candyPink animate-bounce" />
+            <div className="text-center animate-pulse flex flex-col items-center gap-4">
+              <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-pink-600 to-purple-600 shadow-2xl shadow-pink-600/50">
+                <div className="w-full h-full rounded-full bg-[#07060A] flex items-center justify-center">
+                  <Heart className="w-9 h-9 text-pink-500 animate-bounce fill-pink-500" />
                 </div>
               </div>
-              <h2 className="text-4xl font-black text-white tracking-tight">
-                VELVET<span className="text-candyPink">MOTION</span>
-              </h2>
-              <p className="text-xs text-zinc-400 tracking-widest uppercase font-medium">Tap anywhere for your welcome kiss</p>
+              <h2 className="text-3xl font-black">VELVET<span className="text-pink-500">MOTION</span></h2>
+              <p className="text-xs text-zinc-400 uppercase tracking-widest">Tap to enter private companion studio</p>
             </div>
           ) : (
-            <div className="relative flex flex-col items-center">
-              <svg viewBox="0 0 100 70" className="w-56 h-auto filter drop-shadow-[0_0_40px_#FF007F] text-candyPink fill-current animate-pulse">
+            <div className="text-center flex flex-col items-center animate-fade-in">
+              <svg viewBox="0 0 100 70" className="w-52 h-auto text-pink-500 fill-current filter drop-shadow-[0_0_30px_#FF007F]">
                 <path d="M50 15 C40 5, 20 5, 10 20 C18 24, 30 22, 50 30 C70 22, 82 24, 90 20 C80 5, 60 5, 50 15 Z" />
                 <path d="M10 28 C25 35, 38 33, 50 38 C62 33, 75 35, 90 28 C75 55, 65 65, 50 60 C35 65, 25 55, 10 28 Z" />
               </svg>
-              <div className="absolute inset-0 rounded-full border-2 border-candyPink/60 animate-ping pointer-events-none" />
-              <p className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-candyPink to-white mt-6">
-                *kisses your screen* &ldquo;Hehe... welcome, handsome.&rdquo;
-              </p>
+              <p className="text-xl font-bold text-white mt-4">&ldquo;Welcome back, handsome.&rdquo;</p>
             </div>
           )}
         </div>
       )}
 
-      {/* TOP NAVBAR */}
-      <header className="sticky top-0 z-40 backdrop-blur-2xl bg-candyDark/85 border-b border-white/[0.08] px-6 py-3.5 flex items-center justify-between">
+      {/* TOP HEADER */}
+      <header className="h-14 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between bg-[#07060A]/90 backdrop-blur-xl shrink-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-candyPink via-pink-600 to-purple-600 p-[2px] shadow-lg shadow-candyPink/30">
-            <div className="w-full h-full bg-candyDark rounded-[10px] flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-candyPink" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-600 to-purple-600 p-[2px]">
+            <div className="w-full h-full bg-[#07060A] rounded-[10px] flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-pink-500" />
             </div>
           </div>
-          <span className="text-xl font-black tracking-tight text-white flex items-center">
-            VELVET<span className="text-candyPink">MOTION</span>
-          </span>
-        </div>
-
-        {/* Mood Lighting Switcher */}
-        <div className="hidden sm:flex items-center gap-1.5 p-1 rounded-full bg-candySurface border border-white/10">
-          <button
-            onClick={() => setRoomMood("neon")}
-            title="Neon Pink Mood"
-            className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${roomMood === "neon" ? "bg-candyPink text-white" : "text-zinc-400"}`}
-          >
-            🌸 Neon
-          </button>
-          <button
-            onClick={() => setRoomMood("candlelight")}
-            title="Candlelight Amber Mood"
-            className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${roomMood === "candlelight" ? "bg-amber-500 text-black" : "text-zinc-400"}`}
-          >
-            🕯️ Candlelight
-          </button>
-          <button
-            onClick={() => setRoomMood("midnight")}
-            title="Midnight Blue Mood"
-            className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${roomMood === "midnight" ? "bg-indigo-600 text-white" : "text-zinc-400"}`}
-          >
-            🌙 Midnight
-          </button>
+          <span className="text-lg font-black tracking-tight">VELVET<span className="text-pink-500">MOTION</span></span>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* 📲 Install Native App Button (iOS, Mac, Android) */}
-          <button
-            onClick={() => setShowInstallModal(true)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 hover:border-candyPink text-xs text-zinc-300 transition-all active:scale-95"
-          >
-            <span>📲</span> Install App
-          </button>
-
-          {/* User Account / Log In Button */}
-          {currentUser ? (
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-candyPink/15 border border-candyPink/40 text-candyPink text-xs font-bold">
-              👤 {currentUser.name}
-            </span>
-          ) : (
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs text-zinc-300 hover:text-white"
-            >
-              Log In
-            </button>
-          )}
-
-          {/* 💸 30% Rev-Share Referral Button */}
-          <button
-            onClick={() => setShowRefModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 text-xs font-bold transition-all shadow-lg shadow-emerald-500/10 active:scale-95"
-          >
-            <span>💸</span> Earn 30% (Rev-Share)
-          </button>
-
+          <div className="px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-xs text-zinc-300">
+            💎 50 Gems
+          </div>
           {isVIP ? (
-            <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 text-xs font-bold flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> VIP Member (No Ads)
+            <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1">
+              <Sparkles className="w-3 h-3" /> VIP (Ad-Free)
             </span>
           ) : (
             <button
               onClick={() => setShowVIPModal(true)}
-              className="px-4 py-1.5 rounded-full bg-gradient-to-r from-candyPink to-purple-600 text-xs font-bold text-white shadow-lg shadow-candyPink/30 transition-all flex items-center gap-1.5 active:scale-95"
+              className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-xs font-bold text-white shadow-lg active:scale-95"
             >
-              <Zap className="w-3.5 h-3.5" /> VIP Pass
+              <Zap className="w-3.5 h-3.5 inline mr-1" /> Get VIP
             </button>
           )}
         </div>
       </header>
 
-      {/* DUAL MODE & CATEGORIES */}
-      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/[0.06]">
-        <div className="flex p-1 rounded-xl bg-candySurface border border-white/10 w-full sm:w-auto">
-          {[
-            { key: "all", label: "✨ All Girls" },
-            { key: "realistic", label: "📸 Realistic (HD)" },
-            { key: "anime", label: "🌸 Anime & Waifus" }
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTypeTab(tab.key as any)}
-              className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTypeTab === tab.key ? "bg-candyPink text-white shadow-lg shadow-candyPink/40" : "text-zinc-400 hover:text-white"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto scrollbar-none pb-1 sm:pb-0">
-          {["All", "Sweetheart", "Luxury", "Edgy", "Tsundere"].map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 ${
-                activeCategory === cat ? "bg-white/20 text-white border border-white/30" : "bg-candySurface border border-white/10 text-zinc-400 hover:text-white"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* COMPANION MARKETPLACE GRID */}
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 pb-20 flex-1">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCompanions.map(girl => (
-            <div key={girl.id} onClick={() => openRoom(girl)} className="candy-card rounded-3xl overflow-hidden cursor-pointer group relative flex flex-col">
-              <div className="relative aspect-[3/4] w-full overflow-hidden bg-zinc-950">
-                <img src={girl.avatar} alt={girl.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-95 group-hover:brightness-100" />
-                <div className="absolute inset-0 bg-gradient-to-t from-candyDark via-candyDark/25 to-transparent" />
-                
-                <div className="absolute top-4 left-4 flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[11px] font-semibold text-white flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Live
-                  </span>
-                  <span className="px-2.5 py-1 rounded-full bg-candyPink/20 backdrop-blur-md border border-candyPink/40 text-[10px] font-bold text-candyPink uppercase">
-                    {girl.type === "anime" ? "Anime" : "Realistic"}
-                  </span>
-                </div>
-
-                <div className="absolute bottom-4 left-4 right-4 space-y-1.5">
-                  <h3 className="text-2xl font-black text-white group-hover:text-candyPink transition-colors">
-                    {girl.name}, {girl.age}
-                  </h3>
-                  <p className="text-xs text-zinc-300 line-clamp-2 leading-relaxed">{girl.tagline}</p>
-                </div>
-              </div>
-
-              <div className="p-3.5 bg-candySurface/80 border-t border-white/[0.06] flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-400 group-hover:text-white transition-colors flex items-center gap-1.5">
-                  <MessageCircle className="w-3.5 h-3.5 text-candyPink" /> Enter Private Room
-                </span>
-                <div className="w-7 h-7 rounded-full bg-candyPink/10 group-hover:bg-candyPink text-candyPink group-hover:text-white flex items-center justify-center transition-all">
-                  <ChevronRight className="w-4 h-4" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </main>
-
-      {/* COMPANION ROOM WITH TACTILE TOUCH & HEARTBEAT BPM */}
-      {selectedGirl && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-2 sm:p-6 animate-fade-in">
-          <div className="relative w-full max-w-5xl h-[92vh] rounded-3xl bg-candySurface border border-white/10 overflow-hidden flex flex-col lg:flex-row shadow-2xl">
-            <button onClick={() => setSelectedGirl(null)} className="absolute top-4 right-4 z-30 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-zinc-400 hover:text-white flex items-center justify-center">
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* Left Column: Tactile Touch Screen */}
-            <div 
-              onClick={handleTouchCompanion}
-              className="lg:w-1/2 h-72 lg:h-full relative bg-black flex items-center justify-center overflow-hidden cursor-pointer group"
-              title="Tap anywhere on her to touch & hear voice reaction"
-            >
-              <video src={currentVideo} autoPlay loop playsInline className="w-full h-full object-cover pointer-events-none" />
-              <div className="absolute inset-0 bg-gradient-to-t from-candySurface via-transparent to-black/40 pointer-events-none" />
-
-              {/* Touch Ripples */}
-              {touchRipples.map(r => (
-                <div 
-                  key={r.id} 
-                  style={{ left: `${r.x}px`, top: `${r.y}px` }} 
-                  className="absolute pointer-events-none w-16 h-16 rounded-full border-2 border-candyPink bg-candyPink/20 animate-touch-ripple -translate-x-1/2 -translate-y-1/2" 
-                />
-              ))}
-
-              {/* Live Heartbeat BPM Monitor */}
-              <div className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-candyPink/40 text-xs font-mono text-candyPink flex items-center gap-2">
-                <Heart className="w-3.5 h-3.5 text-candyPink animate-heartbeat fill-candyPink" />
-                <span>{heartBPM} BPM</span>
-              </div>
-
-              {/* Girl Header */}
-              <div className="absolute top-4 left-4 z-10 flex items-center gap-3">
-                <img src={selectedGirl.avatar} alt="Avatar" className="w-11 h-11 rounded-full object-cover border-2 border-candyPink" />
-                <div>
-                  <h3 className="text-lg font-bold text-white flex items-center gap-1.5">{selectedGirl.name}, {selectedGirl.age}</h3>
-                  <span className="text-[10px] text-zinc-400">💡 Tap on screen to touch her</span>
-                </div>
-              </div>
-
-              {/* Video Call Trigger */}
-              <button onClick={startCall} className="absolute bottom-6 left-6 z-10 px-4 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/30 transition-all active:scale-95">
-                <Phone className="w-4 h-4 animate-pulse" /> Video Call Her
-              </button>
-            </div>
-
-            {/* Right Column: Interaction, Flirty Games & Chat */}
-            <div className="lg:w-1/2 flex-1 flex flex-col justify-between p-6 bg-candySurface border-t lg:border-t-0 lg:border-l border-white/10">
-              
-              {/* Top Controls: ASMR Mode + Tab Switcher */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <div className="flex items-center gap-2">
-                  {[
-                    { id: "chat", label: "💬 Chat" },
-                    { id: "vault", label: "📸 Vault" },
-                    { id: "video", label: "🎬 Video" }
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setRoomTab(tab.id as any)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        roomTab === tab.id ? "bg-candyPink text-white shadow-lg shadow-candyPink/30" : "text-zinc-400 hover:text-white"
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* ASMR Whisper Toggle */}
+      {/* MAIN THREE-COLUMN APP WORKSPACE */}
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* ============================================================== */}
+        {/* 1. LEFT SIDEBAR: ACTIVE CHATS & DISCOVER                       */}
+        {/* ============================================================== */}
+        <aside className="w-72 border-r border-white/[0.08] bg-[#0E0C15]/70 flex flex-col justify-between hidden md:flex shrink-0">
+          <div>
+            <div className="p-3 border-b border-white/[0.06]">
+              <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-black/40 border border-white/10">
                 <button
-                  onClick={() => setAsmrMode(!asmrMode)}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
-                    asmrMode ? "bg-candyPink/20 border-candyPink text-candyPink" : "border-white/10 text-zinc-400 hover:text-white"
+                  onClick={() => setActiveTab("chats")}
+                  className={`py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 ${
+                    activeTab === "chats" ? "bg-pink-600 text-white" : "text-zinc-400 hover:text-white"
                   }`}
                 >
-                  🎧 ASMR Whisper: {asmrMode ? "ON" : "OFF"}
+                  <MessageCircle className="w-3.5 h-3.5" /> Chats
+                </button>
+                <button
+                  onClick={() => setActiveTab("explore")}
+                  className={`py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 ${
+                    activeTab === "explore" ? "bg-pink-600 text-white" : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5" /> Explore
+                </button>
+              </div>
+            </div>
+
+            {/* Companions Chat List */}
+            <div className="p-2 space-y-1 overflow-y-auto max-h-[calc(100vh-180px)]">
+              {companions.map(girl => {
+                const isSelected = selectedGirl.id === girl.id;
+                return (
+                  <div
+                    key={girl.id}
+                    onClick={() => {
+                      setSelectedGirl(girl);
+                      setActiveTab("chats");
+                    }}
+                    className={`p-2.5 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${
+                      isSelected
+                        ? "bg-pink-600/15 border border-pink-500/40 text-white"
+                        : "hover:bg-white/[0.04] text-zinc-300"
+                    }`}
+                  >
+                    <div className="relative w-11 h-11 rounded-full shrink-0">
+                      <img src={girl.avatar} alt={girl.name} className="w-full h-full rounded-full object-cover" />
+                      <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0E0C15]" />
+                    </div>
+                    <div className="overflow-hidden flex-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-white truncate">{girl.name}</span>
+                        <span className="text-[10px] text-zinc-500">Live</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 truncate mt-0.5">{`"${girl.initialMessage}"`}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* User Profile Pill at Bottom */}
+          <div className="p-3 border-t border-white/[0.08] flex items-center justify-between bg-black/40">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-pink-600/20 text-pink-400 flex items-center justify-center font-bold text-xs">
+                👤
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">Guest Account</p>
+                <p className="text-[10px] text-emerald-400">Synced to Cloud</p>
+              </div>
+            </div>
+            <button onClick={() => setShowVIPModal(true)} className="text-xs font-bold text-pink-500 hover:underline">
+              VIP
+            </button>
+          </div>
+        </aside>
+
+        {/* ============================================================== */}
+        {/* 2. CENTER STAGE: DEDICATED CHAT OR EXPLORE DIRECTORY            */}
+        {/* ============================================================== */}
+        {activeTab === "chats" ? (
+          <main className="flex-1 flex flex-col justify-between bg-[#0B0912]/80 relative overflow-hidden">
+            
+            {/* Chat Room Top Bar */}
+            <div className="h-16 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between bg-[#0E0C15]/50 backdrop-blur-md shrink-0">
+              <div className="flex items-center gap-3">
+                <img src={selectedGirl.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover border-2 border-pink-500" />
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    {selectedGirl.name}, {selectedGirl.age}
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-600/20 text-pink-400 font-normal">
+                      {selectedGirl.category}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-emerald-400 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Active Now • Memory Synced
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={startCall}
+                  className="px-3 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5 transition-all"
+                >
+                  <Phone className="w-3.5 h-3.5 animate-pulse" /> Call Her
+                </button>
+                <button
+                  onClick={() => setShowRightDrawer(!showRightDrawer)}
+                  className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Chat Messages Feed */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              {messages.map((m) => {
+                const isUser = m.sender === "user";
+                return (
+                  <div key={m.id} className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
+                    <span className="text-[10px] text-zinc-500 font-bold mb-1">
+                      {isUser ? "You" : selectedGirl.name}
+                    </span>
+                    
+                    {/* Media attachments */}
+                    {m.type === "selfie" && m.mediaUrl && (
+                      <div className="mb-2 max-w-xs rounded-2xl overflow-hidden border border-pink-500/40 shadow-xl">
+                        <img src={m.mediaUrl} alt="Selfie" className="w-full h-auto object-cover" />
+                      </div>
+                    )}
+
+                    {m.type === "video" && m.mediaUrl && (
+                      <div className="mb-2 max-w-xs rounded-2xl overflow-hidden border border-purple-500/40 shadow-xl">
+                        <video src={m.mediaUrl} autoPlay loop playsInline className="w-full h-auto object-cover" />
+                      </div>
+                    )}
+
+                    <div
+                      className={`max-w-[85%] sm:max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
+                        isUser
+                          ? "bg-pink-600 text-white rounded-br-none"
+                          : "bg-[#181424] border border-white/10 text-zinc-200 rounded-bl-none shadow-lg"
+                      }`}
+                    >
+                      {m.text}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Typing Indicator */}
+              {isTyping && (
+                <div className="flex items-center gap-2 text-xs text-zinc-400">
+                  <span className="w-2 h-2 rounded-full bg-pink-500 animate-ping" />
+                  <span>{selectedGirl.name} is typing...</span>
+                </div>
+              )}
+              <div ref={chatBottomRef} />
+            </div>
+
+            {/* Bottom Actions & Text Input */}
+            <div className="p-3 sm:p-4 bg-[#0E0C15]/80 border-t border-white/[0.08] space-y-2.5">
+              
+              {/* Quick Action Chips */}
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                <button
+                  onClick={handleRequestSelfie}
+                  className="px-3 py-1.5 rounded-full bg-pink-600/15 border border-pink-500/30 text-pink-400 hover:bg-pink-600 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
+                >
+                  <Camera className="w-3.5 h-3.5" /> Send Selfie
+                </button>
+                <button
+                  onClick={() => handleRequestVideo("blow a kiss")}
+                  className="px-3 py-1.5 rounded-full bg-purple-600/15 border border-purple-500/30 text-purple-400 hover:bg-purple-600 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
+                >
+                  <Video className="w-3.5 h-3.5" /> Blow Kiss Video
+                </button>
+                <button
+                  onClick={() => handleRequestVideo("spin around in full outfit")}
+                  className="px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold shrink-0"
+                >
+                  💃 360 Spin
+                </button>
+                <button
+                  onClick={() => setShowVIPModal(true)}
+                  className="px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 shrink-0"
+                >
+                  <Gift className="w-3.5 h-3.5" /> Send BTC Rose
                 </button>
               </div>
 
-              {/* Chat Stream */}
-              {roomTab === "chat" && (
-                <div className="flex-1 flex flex-col justify-between py-2 overflow-hidden">
-                  <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1">
-                    {roomMessages.map((m, i) => (
-                      <div key={i} className={`flex flex-col ${m.sender === "You" ? "items-end" : "items-start"}`}>
-                        <span className="text-[10px] text-zinc-500 font-bold mb-1">{m.sender}</span>
-                        <div className={`max-w-[85%] p-3 rounded-2xl text-xs leading-relaxed ${
-                          m.sender === "You" ? "bg-candyPink text-white rounded-br-none" : "bg-white/[0.04] border border-white/10 text-zinc-200 rounded-bl-none"
-                        }`}>
-                          {m.text}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Flirty Games & Quick Actions */}
-                  <div className="py-2 border-t border-white/[0.06] space-y-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-zinc-400 uppercase">Flirty Game:</span>
-                      <button onClick={() => handleFlirtyGame("truth")} className="px-2.5 py-0.5 rounded-md bg-white/5 hover:bg-candyPink/20 text-[10px] text-zinc-300">
-                        🎲 Ask Truth
-                      </button>
-                      <button onClick={() => handleFlirtyGame("dare")} className="px-2.5 py-0.5 rounded-md bg-white/5 hover:bg-candyPink/20 text-[10px] text-zinc-300">
-                        🔥 Give Dare
-                      </button>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        { label: "💋 Blow Kiss", text: "blows a warm kiss towards you" },
-                        { label: "😳 Blush", text: "blushes deeply and bites lip" },
-                        { label: "😏 Wink", text: "gives a seductive playful wink" }
-                      ].map(act => (
-                        <button key={act.label} onClick={() => handleGenerateMotion(act.text)} className="text-[10px] px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 hover:border-candyPink text-zinc-300">
-                          {act.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Input & Gift */}
-                  <div className="pt-2 flex items-center gap-2">
-                    <button onClick={() => setShowVIPModal(true)} title="Send Rose / Bitcoin Gift" className="p-3 rounded-xl bg-candyPink/10 hover:bg-candyPink text-candyPink hover:text-white border border-candyPink/30 transition-all shrink-0">
-                      <Gift className="w-4 h-4" />
-                    </button>
-                    <input
-                      type="text"
-                      placeholder={`Message ${selectedGirl.name}...`}
-                      value={chatInput}
-                      onChange={e => setChatInput(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && sendMessage()}
-                      className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-candyPink"
-                    />
-                    <button onClick={() => sendMessage()} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-candyPink to-purple-600 font-bold text-xs text-white shadow-lg">
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Vault & Video Tabs */}
-              {roomTab === "vault" && (
-                <div className="flex-1 py-2 overflow-y-auto space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    {selectedGirl.vaultPhotos.map((photo, i) => (
-                      <div key={i} className="relative rounded-2xl overflow-hidden aspect-[3/4] border border-white/10 group">
-                        <img src={photo} alt="Vault Photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                          <span className="text-[11px] font-bold text-white">Photo #{i + 1}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {roomTab === "video" && (
-                <div className="flex-1 py-2 space-y-4">
-                  <label className="text-xs font-bold uppercase text-candyPink block">Prompt-Driven Video Generation:</label>
-                  <textarea
-                    value={videoPrompt}
-                    onChange={e => setVideoPrompt(e.target.value)}
-                    placeholder="Describe how she should move..."
-                    rows={4}
-                    className="w-full rounded-2xl bg-black/50 border border-white/10 p-3.5 text-xs text-white focus:outline-none focus:border-candyPink"
-                  />
-                  <button
-                    onClick={() => handleGenerateMotion()}
-                    disabled={isGeneratingVideo}
-                    className="w-full py-3.5 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-candyPink to-purple-600 text-white shadow-xl flex items-center justify-center gap-2"
-                  >
-                    {isGeneratingVideo ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Render Custom Video
-                  </button>
-                </div>
-              )}
+              {/* Chat Input Bar */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder={`Say something to ${selectedGirl.name}...`}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                  className="flex-1 bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-pink-500 transition-all"
+                />
+                <button
+                  onClick={() => handleSend()}
+                  className="p-3 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold shadow-lg shadow-pink-600/30 active:scale-95"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </main>
+        ) : (
+          /* EXPLORE DIRECTORY VIEW */
+          <main className="flex-1 p-6 overflow-y-auto bg-[#07060A]">
+            <h2 className="text-xl font-black mb-4">Explore AI Companions</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {companions.map(girl => (
+                <div
+                  key={girl.id}
+                  onClick={() => {
+                    setSelectedGirl(girl);
+                    setActiveTab("chats");
+                  }}
+                  className="candy-card rounded-3xl overflow-hidden cursor-pointer group flex flex-col"
+                >
+                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-black">
+                    <img src={girl.avatar} alt={girl.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <h3 className="text-lg font-bold text-white">{girl.name}, {girl.age}</h3>
+                      <p className="text-xs text-zinc-300 line-clamp-1">{girl.tagline}</p>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-white/[0.02] flex items-center justify-between text-xs font-bold text-pink-500">
+                    <span>Chat Now</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </main>
+        )}
 
-      {/* FULL-SCREEN FACETIME CALL SIMULATOR */}
-      {isCalling && selectedGirl && (
+        {/* ============================================================== */}
+        {/* 3. RIGHT DRAWER: PROFILE, INTIMACY & PHOTO VAULT                */}
+        {/* ============================================================== */}
+        {showRightDrawer && (
+          <aside className="w-80 border-l border-white/[0.08] bg-[#0E0C15]/90 flex flex-col justify-between overflow-y-auto hidden lg:flex shrink-0 p-5 space-y-6">
+            
+            {/* Live Looping Video Banner */}
+            <div className="relative aspect-[9/12] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black">
+              <video src={selectedGirl.video} autoPlay loop playsInline className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-white">{selectedGirl.name}</h4>
+                  <p className="text-[10px] text-zinc-400">{selectedGirl.category}</p>
+                </div>
+                <button
+                  onClick={() => playVoice(selectedGirl.voiceIntro)}
+                  className="w-8 h-8 rounded-full bg-pink-600 hover:bg-pink-700 flex items-center justify-center text-white shadow-lg"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Intimacy / Affection Progress Bar */}
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
+              <div className="flex justify-between items-center text-xs font-bold">
+                <span className="text-zinc-400">Intimacy: <strong className="text-pink-500">Level 3 (Crush)</strong></span>
+                <span className="text-pink-500">{selectedGirl.intimacy}%</span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-black/40 overflow-hidden">
+                <div style={{ width: `${selectedGirl.intimacy}%` }} className="h-full bg-gradient-to-r from-pink-600 to-purple-600 rounded-full" />
+              </div>
+              <p className="text-[10px] text-zinc-500">Send gifts or chat to unlock Level 4 Lover privileges.</p>
+            </div>
+
+            {/* Photo Vault Section */}
+            <div className="space-y-2.5">
+              <div className="flex justify-between items-center text-xs font-bold">
+                <span className="text-zinc-300">Unlocked Vault Photos</span>
+                <span className="text-pink-500">{selectedGirl.vaultPhotos.length} Photos</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {selectedGirl.vaultPhotos.map((img, i) => (
+                  <div key={i} className="aspect-square rounded-xl overflow-hidden border border-white/10 cursor-pointer hover:border-pink-500 transition-all">
+                    <img src={img} alt="Vault" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Virtual Bitcoin Gifts (Funding bc1qjmf...) */}
+            <div className="space-y-2 pt-2 border-t border-white/[0.08]">
+              <span className="text-xs font-bold text-zinc-300 block">Send Virtual Gift:</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setShowVIPModal(true)}
+                  className="p-2.5 rounded-xl bg-white/[0.03] hover:bg-pink-600/20 border border-white/10 text-left transition-all"
+                >
+                  <span className="text-xs block">🌹 Rose</span>
+                  <span className="text-[10px] text-zinc-500">0.00005 BTC</span>
+                </button>
+                <button
+                  onClick={() => setShowVIPModal(true)}
+                  className="p-2.5 rounded-xl bg-white/[0.03] hover:bg-purple-600/20 border border-white/10 text-left transition-all"
+                >
+                  <span className="text-xs block">🍾 VIP Bubbly</span>
+                  <span className="text-[10px] text-zinc-500">0.0001 BTC</span>
+                </button>
+              </div>
+            </div>
+
+          </aside>
+        )}
+
+      </div>
+
+      {/* FULL-SCREEN FACETIME VIDEO CALL SIMULATOR */}
+      {isCalling && (
         <div className="fixed inset-0 z-[160] bg-black/95 flex flex-col items-center justify-between p-6 sm:p-10 animate-fade-in">
           <div className="text-center z-10">
             <h2 className="text-2xl font-black text-white">{selectedGirl.name}</h2>
-            <p className="text-xs text-candyPink font-mono mt-1">{callConnected ? "00:34 • Live HD Video Call" : "Calling Companion..."}</p>
+            <p className="text-xs text-pink-500 font-mono mt-1">
+              {callConnected ? "00:28 • Live HD Companion Call" : "Calling Companion..."}
+            </p>
           </div>
-          <div className="relative w-full max-w-sm aspect-[9/16] rounded-3xl overflow-hidden border-2 border-candyPink/50 shadow-2xl flex items-center justify-center bg-zinc-950">
+          <div className="relative w-full max-w-sm aspect-[9/16] rounded-3xl overflow-hidden border-2 border-pink-500/50 shadow-2xl flex items-center justify-center bg-zinc-950">
             {callConnected ? (
               <video src={selectedGirl.video} autoPlay loop playsInline className="w-full h-full object-cover" />
             ) : (
               <div className="flex flex-col items-center gap-4">
-                <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-candyPink to-purple-600 animate-ping">
+                <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-pink-600 to-purple-600 animate-ping">
                   <img src={selectedGirl.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                 </div>
-                <p className="text-xs text-zinc-400 font-mono tracking-widest uppercase">Connecting encrypted stream...</p>
+                <p className="text-xs text-zinc-400 font-mono uppercase">Connecting stream...</p>
               </div>
             )}
           </div>
           <div className="flex items-center gap-6 z-10">
-            <button onClick={endCall} className="p-5 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-xl transition-all active:scale-95">
+            <button onClick={endCall} className="p-5 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-xl active:scale-95">
               <PhoneOff className="w-7 h-7" />
             </button>
           </div>
         </div>
       )}
 
-      {/* REFERRAL REVENUE-SHARE MODAL */}
-      <ReferralModal isOpen={showRefModal} onClose={() => setShowRefModal(false)} userId={userId} />
+      {/* VIP CHECKOUT MODAL (CARD & BITCOIN COINBASE INTEGRATION) */}
+      {showVIPModal && (
+        <div className="fixed inset-0 z-[170] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md rounded-3xl bg-[#120E1C] border border-pink-500/40 p-6 sm:p-8 shadow-2xl text-center">
+            <button onClick={() => setShowVIPModal(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white">✕</button>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-pink-600 to-purple-600 mx-auto flex items-center justify-center mb-3">
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-2xl font-black text-white uppercase tracking-wider">VIP Diamond Pass</h3>
+            <p className="text-xs text-zinc-400 mt-1">100% Ad-Free, Unlimited HD Companion Calls, & Photo Vaults.</p>
 
-      {/* INSTALL APP MODAL */}
-      <InstallAppModal isOpen={showInstallModal} onClose={() => setShowInstallModal(false)} />
+            <div className="p-4 my-4 rounded-2xl bg-white/[0.03] border border-white/10 text-left">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold uppercase text-pink-500">VIP Lifetime Pass</span>
+                <span className="text-lg font-black text-white">$14.99 <span className="text-xs font-normal text-zinc-400">USD</span></span>
+              </div>
+              <ul className="text-xs text-zinc-300 space-y-1">
+                <li>✓ Zero advertisements permanently</li>
+                <li>✓ Full Photo Vault access unlocked</li>
+                <li>✓ Unlimited HD FaceTime Calls</li>
+              </ul>
+            </div>
 
-      {/* USER AUTH MODAL */}
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} onLoginSuccess={(u) => setCurrentUser(u)} />
+            <button
+              onClick={() => {
+                setIsVIP(true);
+                localStorage.setItem("velvet_vip", "true");
+                setShowVIPModal(false);
+                alert("👑 VIP Activated! All ads removed & photo vaults unlocked.");
+              }}
+              className="w-full py-3.5 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg mb-4 flex items-center justify-center gap-2"
+            >
+              <CreditCard className="w-4 h-4" /> Pay $14.99 with Card / Apple Pay
+            </button>
 
-      {/* VIP CHECKOUT MODAL (CARD + BITCOIN) */}
-      <VIPModal
-        isOpen={showVIPModal}
-        onClose={() => setShowVIPModal(false)}
-        onUpgradeSuccess={() => setIsVIP(true)}
-        userId={userId}
-        referralCode={userRefCode}
-      />
+            <div className="p-3 rounded-xl bg-black/60 border border-white/10 text-left">
+              <p className="text-[10px] uppercase font-bold text-amber-300 mb-1">Or Pay with Coinbase Bitcoin:</p>
+              <p className="text-xs font-mono text-zinc-300 truncate">{BTC_ADDRESS}</p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(BTC_ADDRESS);
+                  setCopiedBTC(true);
+                  setTimeout(() => setCopiedBTC(false), 2000);
+                }}
+                className="mt-2 text-xs font-bold text-pink-400 hover:underline flex items-center gap-1"
+              >
+                {copiedBTC ? "✓ Address Copied!" : "Copy BTC Address"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

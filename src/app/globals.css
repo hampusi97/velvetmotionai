@@ -9,20 +9,26 @@
 }
 
 body {
-  background-color: #060509;
+  background-color: #07060A;
   color: #FFFFFF;
   font-family: var(--font-sans);
   overflow-x: hidden;
-  selection-background-color: #FF007F;
-  selection-color: #FFFFFF;
+  height: 100vh;
+}
+
+/* Glassmorphism Panels */
+.app-panel {
+  background: rgba(14, 11, 22, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .candy-card {
-  background: rgba(18, 14, 28, 0.75);
+  background: rgba(18, 14, 28, 0.7);
   backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .candy-card:hover {
@@ -31,40 +37,13 @@ body {
   box-shadow: 0 12px 35px -8px rgba(255, 0, 127, 0.35);
 }
 
-.story-ring {
-  background: linear-gradient(45deg, #FF007F, #D946EF, #8B5CF6);
-  padding: 2px;
-}
-
-/* Heartbeat Animation */
-@keyframes heartPulse {
-  0% { transform: scale(1); }
-  14% { transform: scale(1.22); }
-  28% { transform: scale(1); }
-  42% { transform: scale(1.15); }
-  70% { transform: scale(1); }
-}
-
-.animate-heartbeat {
-  animation: heartPulse 0.85s infinite ease-in-out;
-}
-
-/* Touch Ripple Glow */
-@keyframes touchRipple {
-  0% { transform: scale(0.6); opacity: 1; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-
-.animate-touch-ripple {
-  animation: touchRipple 0.7s ease-out forwards;
-}
-
+/* Custom Chat Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #060509;
+  background: #07060A;
 }
 ::-webkit-scrollbar-thumb {
   background: #231C33;
@@ -72,4 +51,13 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #FF007F;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.06); }
+}
+
+.animate-glow {
+  animation: pulseGlow 6s ease-in-out infinite;
 }

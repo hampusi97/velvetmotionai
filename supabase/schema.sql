@@ -1,97 +1,114 @@
 -- ==============================================================================
 -- VelvetMotion AI - Supabase / PostgreSQL Production Schema
+-- Includes Profiles, Long-Term Memory, Vector Embeddings, & Sentry Bug Telemetry
 -- ==============================================================================
 
--- 1. Enable UUID Extension
+-- 1. Enable Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS vector;
 
--- 2. Users Table
+-- 2. Users / Profiles Table (with Bitcoin Payout Wallet & 30% Rev-Share)
+CREATE TABLE IF NOT EXISTS profiles (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE,
+  is_vip BOOLEAN DEFAULT FALSE,
+  referral_code TEXT UNIQUE,
+  referred_by TEXT,
+  btc_payout_address TEXT DEFAULT 'bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k',
+  earned_btc NUMERIC(16, 8) DEFAULT 0.00000000,
+  earned_usd NUMERIC(10, 2) DEFAULT 0.00,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_ref ON profiles(referral_code);
+
+-- Legacy alias for compatibility with users
 CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,                             -- User session ID or Wallet Address
-    wallet_address TEXT,                             -- User's personal Bitcoin / Web3 address
-    is_vip BOOLEAN DEFAULT FALSE,                    -- VIP Diamond membership status
-    referral_code TEXT UNIQUE NOT NULL,              -- Unique affiliate referral code
-    referred_by TEXT,                                -- Referrer's code if invited
-    btc_balance NUMERIC(16, 8) DEFAULT 0.00000000,   -- Accumulated 30% affiliate earnings
-    usd_balance NUMERIC(10, 2) DEFAULT 0.00,         -- Equivalent USD affiliate balance
-    created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
-    updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())
+  id TEXT PRIMARY KEY,
+  wallet_address TEXT DEFAULT 'bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k',
+  is_vip BOOLEAN DEFAULT FALSE,
+  referral_code TEXT UNIQUE NOT NULL,
+  referred_by TEXT,
+  btc_balance NUMERIC(16, 8) DEFAULT 0.00000000,
+  usd_balance NUMERIC(10, 2) DEFAULT 0.00,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())
 );
 
--- Index for instant referral code lookups
-CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);
-CREATE INDEX IF NOT EXISTS idx_users_wallet_address ON users(wallet_address);
-
--- 3. Conversations Table (Persistent Chat Memory)
-CREATE TABLE IF NOT EXISTS conversations (
-    id BIGSERIAL PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    companion_id TEXT NOT NULL,                      -- e.g. 'chloe', 'asuka', 'sienna', 'elena'
-    sender TEXT NOT NULL,                            -- 'user' | companion name
-    message TEXT NOT NULL,
-    timestamp TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())
+-- 3. Companion Chat Messages & Persistent Memory
+CREATE TABLE IF NOT EXISTS companion_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  companion_id TEXT NOT NULL,
+  sender TEXT NOT NULL, -- 'You' or companion name
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())
 );
 
--- Index for retrieving conversation history quickly
-CREATE INDEX IF NOT EXISTS idx_conversations_user_companion ON conversations(user_id, companion_id, timestamp ASC);
+CREATE INDEX IF NOT EXISTS idx_companion_messages_user ON companion_messages(user_id, companion_id, created_at ASC);
 
--- 4. Vault Unlocks Table (Exclusive 4K Photos)
-CREATE TABLE IF NOT EXISTS vault_unlocks (
-    id BIGSERIAL PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    companion_id TEXT NOT NULL,
-    photo_url TEXT NOT NULL,
-    unlocked_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
-    UNIQUE(user_id, companion_id, photo_url)
+-- 4. Unlocked Photo Vaults
+CREATE TABLE IF NOT EXISTS unlocked_vaults (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  companion_id TEXT NOT NULL,
+  photo_url TEXT NOT NULL,
+  unlocked_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
+  UNIQUE(user_id, companion_id, photo_url)
 );
 
-CREATE INDEX IF NOT EXISTS idx_vault_unlocks_user ON vault_unlocks(user_id, companion_id);
+CREATE INDEX IF NOT EXISTS idx_unlocked_vaults_user ON unlocked_vaults(user_id, companion_id);
 
--- 5. Referral Revenue Ledger (30% Rev-Share Tracking)
+-- 5. Semantic Vector Memory Store (Long-Term AI Memory)
+CREATE TABLE IF NOT EXISTS user_memories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  fact_summary TEXT NOT NULL,
+  embedding VECTOR(1536), -- Vector representation for semantic similarity recall
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_memories_user ON user_memories(user_id);
+
+-- 6. Sentry & Self-Healing Bug Telemetry Logs
+CREATE TABLE IF NOT EXISTS error_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT,
+  error_message TEXT NOT NULL,
+  stack_trace TEXT,
+  url TEXT,
+  user_agent TEXT,
+  status TEXT DEFAULT 'logged', -- 'logged' | 'issue_created' | 'healed'
+  github_issue_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE INDEX IF NOT EXISTS idx_error_logs_status ON error_logs(status);
+
+-- 7. Referral Revenue Ledger
 CREATE TABLE IF NOT EXISTS referral_ledger (
-    id BIGSERIAL PRIMARY KEY,
-    referrer_code TEXT NOT NULL,                     -- Referrer who earned commission
-    referred_user_id TEXT NOT NULL,                  -- User whose transaction triggered rev-share
-    amount_btc NUMERIC(16, 8) NOT NULL,              -- 30% cut in BTC
-    amount_usd NUMERIC(10, 2) NOT NULL,              -- 30% cut in USD
-    source TEXT NOT NULL,                            -- 'vip_purchase' | 'bitcoin_ad_view'
-    transaction_id TEXT,                             -- Coinbase charge code or on-chain tx hash
-    created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())
+  id BIGSERIAL PRIMARY KEY,
+  referrer_code TEXT NOT NULL,
+  referred_user_id TEXT NOT NULL,
+  amount_btc NUMERIC(16, 8) NOT NULL,
+  amount_usd NUMERIC(10, 2) NOT NULL,
+  source TEXT NOT NULL,
+  transaction_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())
 );
 
-CREATE INDEX IF NOT EXISTS idx_referral_ledger_code ON referral_ledger(referrer_code);
-
--- 6. Updated At Automatic Trigger
-CREATE OR REPLACE FUNCTION update_modified_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = TIMEZONE('utc', NOW());
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
-DROP TRIGGER IF EXISTS update_users_modtime ON users;
-CREATE TRIGGER update_users_modtime
-    BEFORE UPDATE ON users
-    FOR EACH ROW
-    EXECUTE FUNCTION update_modified_column();
-
--- 7. Row Level Security (RLS) Policies
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE vault_unlocks ENABLE ROW LEVEL SECURITY;
+-- Row Level Security
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE companion_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE unlocked_vaults ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_memories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE error_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referral_ledger ENABLE ROW LEVEL SECURITY;
 
--- Allow public reads and inserts via service role or matching session
-CREATE POLICY "Allow public select on users" ON users FOR SELECT USING (true);
-CREATE POLICY "Allow public upsert on users" ON users FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update on users" ON users FOR UPDATE USING (true);
-
-CREATE POLICY "Allow read conversations" ON conversations FOR SELECT USING (true);
-CREATE POLICY "Allow insert conversations" ON conversations FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Allow read vault" ON vault_unlocks FOR SELECT USING (true);
-CREATE POLICY "Allow insert vault" ON vault_unlocks FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Allow read referral ledger" ON referral_ledger FOR SELECT USING (true);
-CREATE POLICY "Allow insert referral ledger" ON referral_ledger FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow all profiles" ON profiles FOR ALL USING (true);
+CREATE POLICY "Allow all messages" ON companion_messages FOR ALL USING (true);
+CREATE POLICY "Allow all vaults" ON unlocked_vaults FOR ALL USING (true);
+CREATE POLICY "Allow all memories" ON user_memories FOR ALL USING (true);
+CREATE POLICY "Allow all error_logs" ON error_logs FOR ALL USING (true);
+CREATE POLICY "Allow all referral_ledger" ON referral_ledger FOR ALL USING (true);
