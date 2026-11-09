@@ -291,3 +291,61 @@ export async function getReferralStats(referralCode: string): Promise<{
     earnedUsd: Number(usd.toFixed(2))
   };
 }
+
+// ==============================================================================
+// Client-Side IndexedDB Storage Helper (Unlimited Photos & Chat Storage)
+// ==============================================================================
+const DB_NAME = "VelvetMotionDB";
+const DB_VERSION = 1;
+
+export function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = (e: any) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("chat_memories")) {
+        db.createObjectStore("chat_memories", { keyPath: "companionId" });
+      }
+      if (!db.objectStoreNames.contains("user_gallery")) {
+        db.createObjectStore("user_gallery", { keyPath: "id", autoIncrement: true });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function saveCompanionMemory(companionId: string, messages: any[]): Promise<void> {
+  try {
+    if (typeof window === "undefined") return;
+    const db = await openDB();
+    if (!db) return;
+    const tx = db.transaction("chat_memories", "readwrite");
+    const store = tx.objectStore("chat_memories");
+    store.put({ companionId, messages, updatedAt: new Date().toISOString() });
+  } catch (e) {
+    console.error("IndexedDB save error", e);
+  }
+}
+
+export async function loadCompanionMemory(companionId: string): Promise<any[] | null> {
+  try {
+    if (typeof window === "undefined") return null;
+    const db = await openDB();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      const tx = db.transaction("chat_memories", "readonly");
+      const store = tx.objectStore("chat_memories");
+      const req = store.get(companionId);
+      req.onsuccess = () => resolve(req.result ? req.result.messages : null);
+      req.onerror = () => resolve(null);
+    });
+  } catch (e) {
+    return null;
+  }
+}

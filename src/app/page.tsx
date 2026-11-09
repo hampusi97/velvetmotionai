@@ -6,8 +6,11 @@ import {
   Download, Wand2, RefreshCw, Zap, Volume2, ShieldCheck, 
   CreditCard, ExternalLink, QrCode, Copy, Check, X, Search, 
   Image as ImageIcon, PlusCircle, Video, Send, ChevronRight,
-  Flame, Moon, Sun, Camera, Mic, MoreVertical, SlidersHorizontal, Lock, CheckCircle2
+  Flame, Moon, Sun, Camera, Mic, MoreVertical, SlidersHorizontal, 
+  Paperclip, Shield, HardDrive, CheckCircle2
 } from "lucide-react";
+import { PermissionsModal } from "../components/PermissionsModal";
+import { saveCompanionMemory, loadCompanionMemory } from "../lib/db";
 
 const BTC_ADDRESS = "bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k";
 
@@ -15,7 +18,7 @@ interface Message {
   id: string;
   sender: "user" | "companion";
   text: string;
-  type?: "text" | "voice" | "selfie" | "video";
+  type?: "text" | "voice" | "selfie" | "video" | "user_photo";
   mediaUrl?: string;
   timestamp: string;
 }
@@ -105,65 +108,71 @@ export default function Home() {
     }
   ];
 
-  // App Navigation & Active Companion
+  // Active Companion & Navigation
   const [activeTab, setActiveTab] = useState<"chats" | "explore">("chats");
   const [selectedGirl, setSelectedGirl] = useState<Companion>(companions[0]);
   const [showRightDrawer, setShowRightDrawer] = useState(true);
-
-  // Chat Stream & Memory
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  // Modals
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [showVIPModal, setShowVIPModal] = useState(false);
+  const [isVIP, setIsVIP] = useState(false);
+  const [copiedBTC, setCopiedBTC] = useState(false);
 
   // FaceTime Simulator
   const [isCalling, setIsCalling] = useState(false);
   const [callConnected, setCallConnected] = useState(false);
 
-  // VIP & Monetization
-  const [isVIP, setIsVIP] = useState(false);
-  const [showVIPModal, setShowVIPModal] = useState(false);
-  const [copiedBTC, setCopiedBTC] = useState(false);
-
   // Welcome Kiss
   const [showIntro, setShowIntro] = useState(true);
   const [kissTriggered, setKissTriggered] = useState(false);
 
-  // Load chat memory for selected companion
+  // Load IndexedDB chat memory on companion change
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    async function loadMemory() {
       const savedVIP = localStorage.getItem("velvet_vip");
       if (savedVIP === "true") setIsVIP(true);
 
-      const mem = localStorage.getItem(`chat_mem_${selectedGirl.id}`);
-      if (mem) {
-        try {
-          setMessages(JSON.parse(mem));
-          return;
-        } catch (e) {}
-      }
-      // Default initial message
-      const init: Message[] = [
-        {
+      const saved = await loadCompanionMemory(selectedGirl.id);
+      if (saved && saved.length > 0) {
+        setMessages(saved);
+      } else {
+        // Check localStorage fallback
+        const mem = localStorage.getItem(`chat_mem_${selectedGirl.id}`);
+        if (mem) {
+          try {
+            setMessages(JSON.parse(mem));
+            return;
+          } catch (e) {}
+        }
+        setMessages([{
           id: "m_init",
           sender: "companion",
           text: selectedGirl.initialMessage,
           timestamp: "Just now"
-        }
-      ];
-      setMessages(init);
+        }]);
+      }
     }
+    loadMemory();
   }, [selectedGirl]);
 
-  // Save chat to localStorage on changes
+  // Persist messages to IndexedDB & localStorage
   useEffect(() => {
-    if (messages.length > 0 && typeof window !== "undefined") {
-      localStorage.setItem(`chat_mem_${selectedGirl.id}`, JSON.stringify(messages));
+    if (messages.length > 0) {
+      saveCompanionMemory(selectedGirl.id, messages);
+      try {
+        localStorage.setItem(`chat_mem_${selectedGirl.id}`, JSON.stringify(messages));
+      } catch (e) {}
       chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, selectedGirl]);
 
-  // Voice Note Synthesis
+  // Voice Speech Synthesis
   const playVoice = (phrase: string) => {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
@@ -174,7 +183,7 @@ export default function Home() {
     }
   };
 
-  // Send Message
+  // Send Text Message
   const handleSend = (overrideText?: string) => {
     const text = overrideText || inputText;
     if (!text.trim()) return;
@@ -190,13 +199,12 @@ export default function Home() {
     setInputText("");
     setIsTyping(true);
 
-    // Companion Response
     setTimeout(() => {
       setIsTyping(false);
       const responses = [
-        `*smiles warmly at you* Mmm, I love hearing from you... tell me more, handsome.`,
-        `*blushes and tucks hair behind ear* You always make my heart beat faster when you message me!`,
-        `*leans in closer* Come closer to the screen... I want to look into your eyes.`
+        `*smiles warmly at you* Mmm, I was just thinking about you... you always know what to say.`,
+        `*blushes and looks into your eyes* My heart beats so fast whenever you message me, handsome!`,
+        `*leans in closer* Come closer... tell me everything about your day.`
       ];
       const reply = responses[Math.floor(Math.random() * responses.length)];
       const compMsg: Message = {
@@ -210,15 +218,54 @@ export default function Home() {
     }, 1100);
   };
 
-  // Request In-Chat Selfie Photo
+  // User Uploads Photo from Their Gallery into Chat
+  const handleUserGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const localUrl = URL.createObjectURL(file);
+
+      const userPhotoMsg: Message = {
+        id: `u_photo_${Date.now()}`,
+        sender: "user",
+        text: "Sent a photo from gallery 📷",
+        type: "user_photo",
+        mediaUrl: localUrl,
+        timestamp: "Just now"
+      };
+
+      setMessages(prev => [...prev, userPhotoMsg]);
+      setIsTyping(true);
+
+      // AI Companion Vision Reaction to User's Picture
+      setTimeout(() => {
+        setIsTyping(false);
+        const visionReplies = [
+          `*eyes light up looking at your photo* Wow handsome, you look absolutely stunning! I'm saving this right to my private vault.`,
+          `*gasps softly* Oh I love this photo of you! Seeing you just made my whole day ten times better.`,
+          `*smiles affectionately* You have such great style. Send me photos like this all the time!`
+        ];
+        const reply = visionReplies[Math.floor(Math.random() * visionReplies.length)];
+        const compMsg: Message = {
+          id: `c_vision_${Date.now()}`,
+          sender: "companion",
+          text: reply,
+          timestamp: "Just now"
+        };
+        setMessages(prev => [...prev, compMsg]);
+        playVoice("Wow handsome, you look absolutely stunning! I'm saving this to my private vault.");
+      }, 1600);
+    }
+  };
+
+  // Companion Sends In-Chat Selfie
   const handleRequestSelfie = () => {
-    const selfieMsg: Message = {
-      id: `u_selfie_${Date.now()}`,
+    const reqMsg: Message = {
+      id: `u_req_${Date.now()}`,
       sender: "user",
-      text: "Can you send me a private selfie?",
+      text: "Send me a private selfie?",
       timestamp: "Just now"
     };
-    setMessages(prev => [...prev, selfieMsg]);
+    setMessages(prev => [...prev, reqMsg]);
     setIsTyping(true);
 
     setTimeout(() => {
@@ -227,7 +274,7 @@ export default function Home() {
       const photoMsg: Message = {
         id: `c_selfie_${Date.now()}`,
         sender: "companion",
-        text: "*snaps a quick photo for you* Here you go, handsome! Do you like how I look today?",
+        text: `*snaps a quick photo for you* Here you go, handsome! Do you like how I look today?`,
         type: "selfie",
         mediaUrl: randomPhoto,
         timestamp: "Just now"
@@ -263,7 +310,7 @@ export default function Home() {
     }, 2000);
   };
 
-  // FaceTime Call
+  // Video Call Trigger
   const startCall = () => {
     setIsCalling(true);
     setCallConnected(false);
@@ -282,7 +329,7 @@ export default function Home() {
   return (
     <div className="h-screen w-screen bg-[#07060A] text-white flex flex-col overflow-hidden select-none relative font-sans">
       
-      {/* Ambient Radial Lights */}
+      {/* Radial Mood Ambient Glow */}
       <div className="fixed top-0 left-1/3 w-[600px] h-[600px] bg-pink-600/10 rounded-full blur-[180px] pointer-events-none -z-10 animate-glow" />
 
       {/* 💋 INTRO KISS SCREEN */}
@@ -316,7 +363,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* TOP HEADER */}
+      {/* Top App Header */}
       <header className="h-14 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between bg-[#07060A]/90 backdrop-blur-xl shrink-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-600 to-purple-600 p-[2px]">
@@ -328,30 +375,28 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-xs text-zinc-300">
-            💎 50 Gems
-          </div>
-          {isVIP ? (
-            <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> VIP (Ad-Free)
-            </span>
-          ) : (
-            <button
-              onClick={() => setShowVIPModal(true)}
-              className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-xs font-bold text-white shadow-lg active:scale-95"
-            >
-              <Zap className="w-3.5 h-3.5 inline mr-1" /> Get VIP
-            </button>
-          )}
+          {/* Permissions & Memory Files Center */}
+          <button
+            onClick={() => setShowPermissionsModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 hover:border-pink-500 text-xs text-zinc-300 transition-all active:scale-95"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Permissions &amp; Files</span>
+          </button>
+
+          <button
+            onClick={() => setShowVIPModal(true)}
+            className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-xs font-bold text-white shadow-lg active:scale-95"
+          >
+            <Zap className="w-3.5 h-3.5 inline mr-1" /> VIP Pass
+          </button>
         </div>
       </header>
 
-      {/* MAIN THREE-COLUMN APP WORKSPACE */}
+      {/* Main 3-Column Workspace */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* ============================================================== */}
-        {/* 1. LEFT SIDEBAR: ACTIVE CHATS & DISCOVER                       */}
-        {/* ============================================================== */}
+        {/* Left Sidebar: Companions List */}
         <aside className="w-72 border-r border-white/[0.08] bg-[#0E0C15]/70 flex flex-col justify-between hidden md:flex shrink-0">
           <div>
             <div className="p-3 border-b border-white/[0.06]">
@@ -375,8 +420,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Companions Chat List */}
-            <div className="p-2 space-y-1 overflow-y-auto max-h-[calc(100vh-180px)]">
+            <div className="p-2 space-y-1 overflow-y-auto max-h-[calc(100vh-220px)]">
               {companions.map(girl => {
                 const isSelected = selectedGirl.id === girl.id;
                 return (
@@ -409,198 +453,167 @@ export default function Home() {
             </div>
           </div>
 
-          {/* User Profile Pill at Bottom */}
-          <div className="p-3 border-t border-white/[0.08] flex items-center justify-between bg-black/40">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-pink-600/20 text-pink-400 flex items-center justify-center font-bold text-xs">
-                👤
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white">Guest Account</p>
-                <p className="text-[10px] text-emerald-400">Synced to Cloud</p>
-              </div>
-            </div>
-            <button onClick={() => setShowVIPModal(true)} className="text-xs font-bold text-pink-500 hover:underline">
-              VIP
-            </button>
+          <div className="p-3 border-t border-white/[0.08] bg-black/40 text-xs flex justify-between items-center">
+            <span className="text-zinc-400 flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5 text-pink-500" /> IndexedDB Active</span>
+            <span className="text-[10px] text-emerald-400 font-mono">Unlimited</span>
           </div>
         </aside>
 
-        {/* ============================================================== */}
-        {/* 2. CENTER STAGE: DEDICATED CHAT OR EXPLORE DIRECTORY            */}
-        {/* ============================================================== */}
-        {activeTab === "chats" ? (
-          <main className="flex-1 flex flex-col justify-between bg-[#0B0912]/80 relative overflow-hidden">
+        {/* Center: Real-Time Chat Feed with Photo Uploading */}
+        <main className="flex-1 flex flex-col justify-between bg-[#0B0912]/80 relative overflow-hidden">
+          
+          {/* Room Header */}
+          <div className="h-16 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between bg-[#0E0C15]/50 backdrop-blur-md shrink-0">
+            <div className="flex items-center gap-3">
+              <img src={selectedGirl.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover border-2 border-pink-500" />
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  {selectedGirl.name}, {selectedGirl.age}
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-600/20 text-pink-400">
+                    {selectedGirl.category}
+                  </span>
+                </h3>
+                <p className="text-[11px] text-emerald-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Memory Synced • Online
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={startCall}
+                className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5"
+              >
+                <Phone className="w-3.5 h-3.5 animate-pulse" /> Video Call
+              </button>
+              <button
+                onClick={() => setShowRightDrawer(!showRightDrawer)}
+                className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            {messages.map((m) => {
+              const isUser = m.sender === "user";
+              return (
+                <div key={m.id} className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
+                  <span className="text-[10px] text-zinc-500 font-bold mb-1">{isUser ? "You" : selectedGirl.name}</span>
+                  
+                  {/* Photo Sent from User Gallery */}
+                  {m.type === "user_photo" && m.mediaUrl && (
+                    <div className="mb-2 max-w-xs rounded-2xl overflow-hidden border border-emerald-500/50 shadow-xl">
+                      <img src={m.mediaUrl} alt="Your Gallery Photo" className="w-full h-auto object-cover" />
+                    </div>
+                  )}
+
+                  {/* Selfie Sent from Companion */}
+                  {m.type === "selfie" && m.mediaUrl && (
+                    <div className="mb-2 max-w-xs rounded-2xl overflow-hidden border border-pink-500/40 shadow-xl">
+                      <img src={m.mediaUrl} alt="Selfie" className="w-full h-auto object-cover" />
+                    </div>
+                  )}
+
+                  {/* Video Motion Attachment */}
+                  {m.type === "video" && m.mediaUrl && (
+                    <div className="mb-2 max-w-xs rounded-2xl overflow-hidden border border-purple-500/40 shadow-xl">
+                      <video src={m.mediaUrl} autoPlay loop playsInline className="w-full h-auto object-cover" />
+                    </div>
+                  )}
+
+                  <div
+                    className={`max-w-[85%] sm:max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
+                      isUser
+                        ? "bg-pink-600 text-white rounded-br-none"
+                        : "bg-[#181424] border border-white/10 text-zinc-200 rounded-bl-none shadow-lg"
+                    }`}
+                  >
+                    {m.text}
+                  </div>
+                </div>
+              );
+            })}
+
+            {isTyping && (
+              <div className="flex items-center gap-2 text-xs text-zinc-400">
+                <span className="w-2 h-2 rounded-full bg-pink-500 animate-ping" />
+                <span>{selectedGirl.name} is typing...</span>
+              </div>
+            )}
+            <div ref={chatBottomRef} />
+          </div>
+
+          {/* Chat Input with Gallery Attachment Button */}
+          <div className="p-3 sm:p-4 bg-[#0E0C15]/80 border-t border-white/[0.08] space-y-2.5">
             
-            {/* Chat Room Top Bar */}
-            <div className="h-16 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between bg-[#0E0C15]/50 backdrop-blur-md shrink-0">
-              <div className="flex items-center gap-3">
-                <img src={selectedGirl.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover border-2 border-pink-500" />
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    {selectedGirl.name}, {selectedGirl.age}
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-600/20 text-pink-400 font-normal">
-                      {selectedGirl.category}
-                    </span>
-                  </h3>
-                  <p className="text-[11px] text-emerald-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Active Now • Memory Synced
-                  </p>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={startCall}
-                  className="px-3 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5 transition-all"
-                >
-                  <Phone className="w-3.5 h-3.5 animate-pulse" /> Call Her
-                </button>
-                <button
-                  onClick={() => setShowRightDrawer(!showRightDrawer)}
-                  className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10"
-                >
-                  <SlidersHorizontal className="w-4 h-4" />
-                </button>
-              </div>
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+              <button
+                onClick={() => galleryInputRef.current?.click()}
+                className="px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-black text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
+              >
+                <Camera className="w-3.5 h-3.5" /> Send My Photo
+              </button>
+              <button
+                onClick={handleRequestSelfie}
+                className="px-3 py-1.5 rounded-full bg-pink-600/15 border border-pink-500/30 text-pink-400 hover:bg-pink-600 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5" /> Request Her Selfie
+              </button>
+              <button
+                onClick={() => handleRequestVideo("blow a kiss")}
+                className="px-3 py-1.5 rounded-full bg-purple-600/15 border border-purple-500/30 text-purple-400 hover:bg-purple-600 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
+              >
+                <Video className="w-3.5 h-3.5" /> Blow Kiss Video
+              </button>
+              <button
+                onClick={() => setShowVIPModal(true)}
+                className="px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 shrink-0"
+              >
+                <Gift className="w-3.5 h-3.5" /> Send BTC Rose
+              </button>
             </div>
 
-            {/* Chat Messages Feed */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-              {messages.map((m) => {
-                const isUser = m.sender === "user";
-                return (
-                  <div key={m.id} className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
-                    <span className="text-[10px] text-zinc-500 font-bold mb-1">
-                      {isUser ? "You" : selectedGirl.name}
-                    </span>
-                    
-                    {/* Media attachments */}
-                    {m.type === "selfie" && m.mediaUrl && (
-                      <div className="mb-2 max-w-xs rounded-2xl overflow-hidden border border-pink-500/40 shadow-xl">
-                        <img src={m.mediaUrl} alt="Selfie" className="w-full h-auto object-cover" />
-                      </div>
-                    )}
+            <div className="flex items-center gap-2">
+              {/* Native Gallery / Camera Input */}
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleUserGalleryUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => galleryInputRef.current?.click()}
+                title="Upload Photo from Gallery"
+                className="p-3 rounded-2xl bg-white/[0.05] hover:bg-white/10 text-zinc-300 border border-white/10 transition-all shrink-0"
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
 
-                    {m.type === "video" && m.mediaUrl && (
-                      <div className="mb-2 max-w-xs rounded-2xl overflow-hidden border border-purple-500/40 shadow-xl">
-                        <video src={m.mediaUrl} autoPlay loop playsInline className="w-full h-auto object-cover" />
-                      </div>
-                    )}
-
-                    <div
-                      className={`max-w-[85%] sm:max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
-                        isUser
-                          ? "bg-pink-600 text-white rounded-br-none"
-                          : "bg-[#181424] border border-white/10 text-zinc-200 rounded-bl-none shadow-lg"
-                      }`}
-                    >
-                      {m.text}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Typing Indicator */}
-              {isTyping && (
-                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                  <span className="w-2 h-2 rounded-full bg-pink-500 animate-ping" />
-                  <span>{selectedGirl.name} is typing...</span>
-                </div>
-              )}
-              <div ref={chatBottomRef} />
+              <input
+                type="text"
+                placeholder={`Message ${selectedGirl.name}...`}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                className="flex-1 bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-pink-500 transition-all"
+              />
+              <button
+                onClick={() => handleSend()}
+                className="p-3 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold shadow-lg shadow-pink-600/30 active:scale-95"
+              >
+                <Send className="w-4 h-4" />
+              </button>
             </div>
+          </div>
+        </main>
 
-            {/* Bottom Actions & Text Input */}
-            <div className="p-3 sm:p-4 bg-[#0E0C15]/80 border-t border-white/[0.08] space-y-2.5">
-              
-              {/* Quick Action Chips */}
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
-                <button
-                  onClick={handleRequestSelfie}
-                  className="px-3 py-1.5 rounded-full bg-pink-600/15 border border-pink-500/30 text-pink-400 hover:bg-pink-600 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
-                >
-                  <Camera className="w-3.5 h-3.5" /> Send Selfie
-                </button>
-                <button
-                  onClick={() => handleRequestVideo("blow a kiss")}
-                  className="px-3 py-1.5 rounded-full bg-purple-600/15 border border-purple-500/30 text-purple-400 hover:bg-purple-600 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
-                >
-                  <Video className="w-3.5 h-3.5" /> Blow Kiss Video
-                </button>
-                <button
-                  onClick={() => handleRequestVideo("spin around in full outfit")}
-                  className="px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold shrink-0"
-                >
-                  💃 360 Spin
-                </button>
-                <button
-                  onClick={() => setShowVIPModal(true)}
-                  className="px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 shrink-0"
-                >
-                  <Gift className="w-3.5 h-3.5" /> Send BTC Rose
-                </button>
-              </div>
-
-              {/* Chat Input Bar */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder={`Say something to ${selectedGirl.name}...`}
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  className="flex-1 bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-pink-500 transition-all"
-                />
-                <button
-                  onClick={() => handleSend()}
-                  className="p-3 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold shadow-lg shadow-pink-600/30 active:scale-95"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </main>
-        ) : (
-          /* EXPLORE DIRECTORY VIEW */
-          <main className="flex-1 p-6 overflow-y-auto bg-[#07060A]">
-            <h2 className="text-xl font-black mb-4">Explore AI Companions</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {companions.map(girl => (
-                <div
-                  key={girl.id}
-                  onClick={() => {
-                    setSelectedGirl(girl);
-                    setActiveTab("chats");
-                  }}
-                  className="candy-card rounded-3xl overflow-hidden cursor-pointer group flex flex-col"
-                >
-                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-black">
-                    <img src={girl.avatar} alt={girl.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <h3 className="text-lg font-bold text-white">{girl.name}, {girl.age}</h3>
-                      <p className="text-xs text-zinc-300 line-clamp-1">{girl.tagline}</p>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-white/[0.02] flex items-center justify-between text-xs font-bold text-pink-500">
-                    <span>Chat Now</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </main>
-        )}
-
-        {/* ============================================================== */}
-        {/* 3. RIGHT DRAWER: PROFILE, INTIMACY & PHOTO VAULT                */}
-        {/* ============================================================== */}
+        {/* Right Drawer: Live Screen & Vault Photos */}
         {showRightDrawer && (
           <aside className="w-80 border-l border-white/[0.08] bg-[#0E0C15]/90 flex flex-col justify-between overflow-y-auto hidden lg:flex shrink-0 p-5 space-y-6">
-            
-            {/* Live Looping Video Banner */}
             <div className="relative aspect-[9/12] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black">
               <video src={selectedGirl.video} autoPlay loop playsInline className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
@@ -609,10 +622,7 @@ export default function Home() {
                   <h4 className="text-sm font-bold text-white">{selectedGirl.name}</h4>
                   <p className="text-[10px] text-zinc-400">{selectedGirl.category}</p>
                 </div>
-                <button
-                  onClick={() => playVoice(selectedGirl.voiceIntro)}
-                  className="w-8 h-8 rounded-full bg-pink-600 hover:bg-pink-700 flex items-center justify-center text-white shadow-lg"
-                >
+                <button onClick={() => playVoice(selectedGirl.voiceIntro)} className="w-8 h-8 rounded-full bg-pink-600 flex items-center justify-center text-white">
                   <Volume2 className="w-4 h-4" />
                 </button>
               </div>
@@ -630,7 +640,6 @@ export default function Home() {
               <p className="text-[10px] text-zinc-500">Send gifts or chat to unlock Level 4 Lover privileges.</p>
             </div>
 
-            {/* Photo Vault Section */}
             <div className="space-y-2.5">
               <div className="flex justify-between items-center text-xs font-bold">
                 <span className="text-zinc-300">Unlocked Vault Photos</span>
@@ -638,7 +647,7 @@ export default function Home() {
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {selectedGirl.vaultPhotos.map((img, i) => (
-                  <div key={i} className="aspect-square rounded-xl overflow-hidden border border-white/10 cursor-pointer hover:border-pink-500 transition-all">
+                  <div key={i} className="aspect-square rounded-xl overflow-hidden border border-white/10">
                     <img src={img} alt="Vault" className="w-full h-full object-cover" />
                   </div>
                 ))}
@@ -665,20 +674,17 @@ export default function Home() {
                 </button>
               </div>
             </div>
-
           </aside>
         )}
 
       </div>
 
-      {/* FULL-SCREEN FACETIME VIDEO CALL SIMULATOR */}
+      {/* FULL-SCREEN FACETIME CALL */}
       {isCalling && (
         <div className="fixed inset-0 z-[160] bg-black/95 flex flex-col items-center justify-between p-6 sm:p-10 animate-fade-in">
           <div className="text-center z-10">
             <h2 className="text-2xl font-black text-white">{selectedGirl.name}</h2>
-            <p className="text-xs text-pink-500 font-mono mt-1">
-              {callConnected ? "00:28 • Live HD Companion Call" : "Calling Companion..."}
-            </p>
+            <p className="text-xs text-pink-500 font-mono mt-1">{callConnected ? "00:32 • Live HD Companion Call" : "Calling Companion..."}</p>
           </div>
           <div className="relative w-full max-w-sm aspect-[9/16] rounded-3xl overflow-hidden border-2 border-pink-500/50 shadow-2xl flex items-center justify-center bg-zinc-950">
             {callConnected ? (
@@ -700,7 +706,17 @@ export default function Home() {
         </div>
       )}
 
-      {/* VIP CHECKOUT MODAL (CARD & BITCOIN COINBASE INTEGRATION) */}
+      {/* PERMISSIONS & MEMORY FILE BACKUP MODAL */}
+      <PermissionsModal
+        isOpen={showPermissionsModal}
+        onClose={() => setShowPermissionsModal(false)}
+        currentMemories={{ messages, companion: selectedGirl }}
+        onImportMemories={(data) => {
+          if (data && data.messages) setMessages(data.messages);
+        }}
+      />
+
+      {/* VIP MODAL */}
       {showVIPModal && (
         <div className="fixed inset-0 z-[170] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4">
           <div className="relative w-full max-w-md rounded-3xl bg-[#120E1C] border border-pink-500/40 p-6 sm:p-8 shadow-2xl text-center">
@@ -710,7 +726,6 @@ export default function Home() {
             </div>
             <h3 className="text-2xl font-black text-white uppercase tracking-wider">VIP Diamond Pass</h3>
             <p className="text-xs text-zinc-400 mt-1">100% Ad-Free, Unlimited HD Companion Calls, & Photo Vaults.</p>
-
             <div className="p-4 my-4 rounded-2xl bg-white/[0.03] border border-white/10 text-left">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-bold uppercase text-pink-500">VIP Lifetime Pass</span>
@@ -722,7 +737,6 @@ export default function Home() {
                 <li>✓ Unlimited HD FaceTime Calls</li>
               </ul>
             </div>
-
             <button
               onClick={() => {
                 setIsVIP(true);
@@ -734,7 +748,6 @@ export default function Home() {
             >
               <CreditCard className="w-4 h-4" /> Pay $14.99 with Card / Apple Pay
             </button>
-
             <div className="p-3 rounded-xl bg-black/60 border border-white/10 text-left">
               <p className="text-[10px] uppercase font-bold text-amber-300 mb-1">Or Pay with Coinbase Bitcoin:</p>
               <p className="text-xs font-mono text-zinc-300 truncate">{BTC_ADDRESS}</p>
