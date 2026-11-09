@@ -12,7 +12,8 @@ import {
 import { PermissionsModal } from "../components/PermissionsModal";
 import { ShareHubModal } from "../components/ShareHubModal";
 import { ReengagementEngine } from "../components/ReengagementEngine";
-import { Link2 } from "lucide-react";
+import { VIPLoyaltyModal } from "../components/VIPLoyaltyModal";
+import { Link2, Crown, Trophy } from "lucide-react";
 import { saveCompanionMemory, loadCompanionMemory } from "../lib/db";
 
 const BTC_ADDRESS = "bc1qjmf9u3cmrn59q5nqmzgkvrgy7exegnfmph999k";
@@ -43,6 +44,22 @@ interface Companion {
 
 export default function Home() {
   const defaultCompanions: Companion[] = [
+    {
+      id: "genevieve",
+      name: "Genevieve",
+      age: 23,
+      tagline: "👑 Monaco Sovereign Heiress • Unlocked exclusively for High-Roller Patrons.",
+      category: "Luxury",
+      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1000&q=80",
+      video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      voiceIntro: "Welcome to my private penthouse, my Lord. Few ever earn the privilege to see me here.",
+      initialMessage: "Only the most generous gentlemen get my private number. I poured your favorite vintage... come sit with me.",
+      tags: ["Royalty", "Exclusive", "Whale-Only"],
+      intimacy: 90,
+      vaultPhotos: [
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80"
+      ]
+    },
     {
       id: "chloe",
       name: "Chloe",
@@ -125,9 +142,29 @@ export default function Home() {
   // Modals
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [showShareHub, setShowShareHub] = useState(false);
+  const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
   const [showVIPModal, setShowVIPModal] = useState(false);
   const [isVIP, setIsVIP] = useState(false);
   const [copiedBTC, setCopiedBTC] = useState(false);
+  const [userTotalSpent, setUserTotalSpent] = useState(25.0); // Default Bronze for testing
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedSpent = localStorage.getItem("velvet_total_spent");
+      if (savedSpent) setUserTotalSpent(parseFloat(savedSpent));
+    }
+  }, []);
+
+  const handleDeposit = (amount: number) => {
+    const updated = userTotalSpent + amount;
+    setUserTotalSpent(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("velvet_total_spent", updated.toString());
+      localStorage.setItem("velvet_vip", "true");
+    }
+    setIsVIP(true);
+    alert(`🎉 Deposit received! You are now at $${updated.toFixed(2)} total spent.`);
+  };
 
   // FaceTime Simulator
   const [isCalling, setIsCalling] = useState(false);
@@ -436,6 +473,15 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* 👑 Hall of Fame & High-Roller Royalty Button */}
+          <button
+            onClick={() => setShowLoyaltyModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-amber-300 hover:scale-105 text-xs font-bold transition-all shadow-lg shadow-amber-500/10"
+          >
+            <Crown className="w-3.5 h-3.5 text-amber-400" />
+            <span>Hall of Fame (${userTotalSpent.toFixed(0)})</span>
+          </button>
+
           {/* 🔗 Shareable Links Generator */}
           <button
             onClick={() => setShowShareHub(true)}
@@ -784,6 +830,14 @@ export default function Home() {
       <ShareHubModal
         isOpen={showShareHub}
         onClose={() => setShowShareHub(false)}
+      />
+
+      {/* HIGH-ROLLER VIP LOYALTY & HALL OF FAME MODAL */}
+      <VIPLoyaltyModal
+        isOpen={showLoyaltyModal}
+        onClose={() => setShowLoyaltyModal(false)}
+        userTotalSpent={userTotalSpent}
+        onSimulateDeposit={handleDeposit}
       />
 
       {/* PERMISSIONS & MEMORY FILE BACKUP MODAL */}
