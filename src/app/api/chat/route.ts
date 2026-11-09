@@ -6,6 +6,7 @@ interface ChatRequest {
   message: string;
   conversationHistory?: { sender: string; text: string }[];
   intimacyLevel?: number;
+  memories?: string[];
   userId?: string;
 }
 
@@ -92,12 +93,13 @@ const COMPANION_PROFILES: Record<string, {
 export async function POST(req: Request) {
   try {
     const body: ChatRequest = await req.json();
-    const { companionId, message, conversationHistory = [], intimacyLevel = 50, userId = "anonymous" } = body;
+    const { companionId, message, conversationHistory = [], intimacyLevel = 50, memories = [], userId = "anonymous" } = body;
 
     if (!message || !message.trim()) {
       return NextResponse.json({ error: "Message cannot be empty." }, { status: 400 });
     }
 
+    const kept = memories.filter((item) => typeof item === "string" && item.trim()).slice(0, 12);
     const companionKey = (companionId || "chloe").toLowerCase();
     const profile = COMPANION_PROFILES[companionKey] || COMPANION_PROFILES.chloe;
 
@@ -126,10 +128,11 @@ export async function POST(req: Request) {
 
         const systemPrompt = `You are ${profile.name}, an AI companion (${profile.archetype}).
 Your personality is ${profile.tone}.
-Current closeness with the user: ${intimacyLevel}/100.
+What you remember about them: ${kept.length ? kept.join("; ") : "nothing yet"}.
 Guidelines:
 - Keep answers conversational, 1 to 3 sentences.
-- You may be warm and affectionate. Never write explicit sexual content, graphic intimacy, nudity, or erotic roleplay.
+- Use a remembered fact when it fits. Do not invent facts.
+- You may be warm. Never write explicit sexual content, graphic intimacy, nudity, or erotic roleplay.
 - Never mention you are an AI model. Stay in character.`;
 
         const formattedMessages = [
@@ -186,7 +189,9 @@ Guidelines:
     // 2. Graceful Built-In Personality Engine Fallback
     const isHighIntimacy = intimacyLevel >= 55;
     const responsePool = isHighIntimacy ? profile.intimateResponses : profile.casualResponses;
-    const fallbackReply = responsePool[Math.floor(Math.random() * responsePool.length)];
+    const fallbackReply = kept.length
+      ? `${responsePool[Math.floor(Math.random() * responsePool.length)]} I still have this: ${kept[0]}.`
+      : responsePool[Math.floor(Math.random() * responsePool.length)];
 
     // Persist conversation
     saveConversation(userId, companionKey, "You", message).catch(() => {});

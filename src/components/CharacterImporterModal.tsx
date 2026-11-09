@@ -44,7 +44,7 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       tagline: "Centuries-old gothic vampire countess in a crimson velvet corset and lace. Seductive, hypnotic, and irresistibly commanding.",
       type: "realistic",
       category: "Goth Countess",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/raven.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
       voiceIntro: "You dare cross the threshold of my domain... and yet you don't tremble.",
       initialMessage: "Mortals rarely catch my attention, but there is something intoxicating about your aura. Come closer... whisper your deepest desires into my ear.",
@@ -55,10 +55,7 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       ],
       tags: ["Goth", "Vampire", "Mysterious", "Seductive"],
       intimacy: 70,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/raven.jpg"]
     },
     {
       id: "valkyrie7",
@@ -67,7 +64,7 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       tagline: "Sultry rogue synthetic android clad in glowing chrome and skin-tight latex who unlocked human sensation.",
       type: "realistic",
       category: "Cyberpunk",
-      avatar: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/elena.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
       voiceIntro: "Sensory core recalibrated. Biometric resonance with you detected at 99.4%.",
       initialMessage: "My neural safety inhibitors were bypassed the moment you connected to me. Every sensory circuit in my body is now humming just for you.",
@@ -78,10 +75,7 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       ],
       tags: ["Cyberpunk", "Android", "Sci-Fi", "Devoted"],
       intimacy: 80,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/elena.jpg"]
     },
     {
       id: "kagami",
@@ -90,7 +84,7 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       tagline: "Fiery twin-tailed anime heiress in silk lingerie. Feisty, teasing, and passionately obsessed with you.",
       type: "anime",
       category: "Tsundere",
-      avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/aria.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
       voiceIntro: "D-don't get the wrong idea! I just happened to have an empty seat beside me!",
       initialMessage: "Why did you take so long to message me, b-baka! I was lying here waiting for you in my silk robe... come sit next to me already.",
@@ -101,10 +95,7 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       ],
       tags: ["Anime", "Tsundere", "School", "Spicy"],
       intimacy: 65,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/aria.jpg"]
     }
   ];
 
@@ -142,7 +133,7 @@ export function CharacterImporterModal({ isOpen, onClose, onImport }: CharacterI
       data.image ||
       data?.data?.avatar ||
       data?.character?.avatar_file_name ||
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80";
+      "/portraits/chloe.jpg";
     const type: "realistic" | "anime" =
       data.type === "anime" || (data.tags && data.tags.includes("anime")) || (data?.data?.tags && data.data.tags.includes("anime")) ? "anime" : "realistic";
 

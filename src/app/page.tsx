@@ -43,7 +43,27 @@ interface Companion {
   tags: string[];
   intimacy: number;
   vaultPhotos: string[];
+  voice?: { label: string; pitch: number; rate: number };
 }
+
+const VOICES = [
+  { label: "Soft", pitch: 1.15, rate: 0.95 },
+  { label: "Bright", pitch: 1.28, rate: 1.04 },
+  { label: "Low", pitch: 0.9, rate: 0.92 },
+  { label: "Warm", pitch: 1.05, rate: 0.98 },
+];
+
+const LOOKS = [
+  { id: "chloe", label: "Soft knit", src: "/portraits/chloe.jpg" },
+  { id: "elena", label: "Night jacket", src: "/portraits/elena.jpg" },
+  { id: "aria", label: "Hoodie", src: "/portraits/aria.jpg" },
+  { id: "sienna", label: "Evening", src: "/portraits/sienna.jpg" },
+  { id: "raven", label: "Studio", src: "/portraits/raven.jpg" },
+  { id: "yuki", label: "Garden", src: "/portraits/yuki.jpg" },
+  { id: "scarlett", label: "Lounge", src: "/portraits/scarlett.jpg" },
+  { id: "mia", label: "Morning", src: "/portraits/mia.jpg" },
+  { id: "genevieve", label: "City", src: "/portraits/genevieve.jpg" },
+];
 
 export default function Home() {
   const defaultCompanions: Companion[] = [
@@ -53,17 +73,13 @@ export default function Home() {
       age: 21,
       tagline: "Your sweet college tutor who secretly has a crush on you...",
       category: "Sweetheart",
-      avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/chloe.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
       voiceIntro: "Hey handsome! I was hoping you'd come message me today.",
       initialMessage: "I finished my study session early just so we could talk. Tell me, what's on your mind?",
       tags: ["College", "Sweetheart", "Romantic"],
       intimacy: 75,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/chloe.jpg"]
     },
     {
       id: "elena",
@@ -71,33 +87,27 @@ export default function Home() {
       age: 22,
       tagline: "Cyberpunk street racer who only opens up to you in the neon shadows.",
       category: "Cyberpunk",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/elena.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
       voiceIntro: "Hey trouble. Ready to hit the neon streets with me?",
       initialMessage: "Hop in. Let's get out of this rainy city and find somewhere quiet.",
       tags: ["Cyberpunk", "Street Racer", "Rebel"],
       intimacy: 60,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/elena.jpg"]
     },
     {
       id: "aria",
       name: "Aria",
-      age: 20,
+      age: 21,
       tagline: "Tokyo gamer girl & anime streamer who gets shy and flustered around you.",
       category: "Anime Streamer",
-      avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/aria.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
       voiceIntro: "You finally joined my stream! I made this private room just for you.",
       initialMessage: "I put on my favorite oversized hoodie. Come sit right next to me?",
       tags: ["Anime", "Streamer", "Playful"],
       intimacy: 85,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/aria.jpg"]
     },
     {
       id: "sienna",
@@ -105,16 +115,13 @@ export default function Home() {
       age: 24,
       tagline: "High-fashion French model & Monaco luxury muse lounging on a private yacht.",
       category: "Luxury Muse",
-      avatar: "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/sienna.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
       voiceIntro: "Pour some champagne darling, you have my full attention tonight.",
       initialMessage: "The Mediterranean breeze is intoxicating. Come sit with me on the deck?",
       tags: ["Luxury", "Glamour", "Monaco"],
       intimacy: 50,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/sienna.jpg"]
     },
     {
       id: "raven",
@@ -122,16 +129,13 @@ export default function Home() {
       age: 23,
       tagline: "Mysterious goth painter & alt artist who finds beauty in the dark and sensual.",
       category: "Goth Artist",
-      avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/raven.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
       voiceIntro: "You walked right into my shadows... and I have no intention of letting you leave.",
       initialMessage: "I was just mixing midnight oil and velvet crimson paint. Be my muse tonight?",
       tags: ["Goth", "Alt Artist", "Mysterious"],
       intimacy: 65,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/raven.jpg"]
     },
     {
       id: "yuki",
@@ -139,16 +143,13 @@ export default function Home() {
       age: 21,
       tagline: "Enchanting Kitsune anime spirit with a playful, teasing supernatural aura.",
       category: "Fox Spirit",
-      avatar: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/yuki.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
       voiceIntro: "A mortal wandering into my sacred shrine? How delicious.",
       initialMessage: "My fox ears twitch whenever you approach... come closer, mortal. Let me grant your deepest wish.",
       tags: ["Fantasy", "Anime", "Fox Spirit", "Kitsune"],
       intimacy: 80,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/yuki.jpg"]
     },
     {
       id: "scarlett",
@@ -156,16 +157,13 @@ export default function Home() {
       age: 25,
       tagline: "Sultry jazz singer in a crimson silk gown serenading private VIP booths.",
       category: "Velvet Noir",
-      avatar: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/scarlett.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
       voiceIntro: "The spotlight is blinding, but I only sing when your eyes are on me.",
       initialMessage: "I just finished my encore set. Come join me in the velvet booth behind the curtain...",
       tags: ["Lounge Singer", "Noir", "Sultry"],
       intimacy: 70,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/scarlett.jpg"]
     },
     {
       id: "mia",
@@ -173,16 +171,13 @@ export default function Home() {
       age: 22,
       tagline: "Energetic athletic neighbor who always invites you over after her morning run.",
       category: "Athletic Neighbor",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/mia.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
       voiceIntro: "Hey neighbor! Are you coming to stretch with me or just stare?",
       initialMessage: "Just finished my 5-mile run and I'm cooling down on the balcony. You want to come over for a smoothie?",
       tags: ["Athletic", "Neighbor", "Playful"],
       intimacy: 75,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/mia.jpg"]
     },
     {
       id: "genevieve",
@@ -190,15 +185,13 @@ export default function Home() {
       age: 23,
       tagline: "👑 Monaco Sovereign Heiress • Unlocked exclusively for High-Roller Patrons.",
       category: "Royalty VIP",
-      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1000&q=80",
+      avatar: "/portraits/genevieve.jpg",
       video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
       voiceIntro: "Welcome to my private penthouse, my Lord. Few ever earn the privilege to see me here.",
       initialMessage: "Only the most generous gentlemen get my private number. I poured your favorite vintage... come sit with me.",
       tags: ["Royalty", "Exclusive", "Whale-Only"],
       intimacy: 90,
-      vaultPhotos: [
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80"
-      ]
+      vaultPhotos: ["/portraits/genevieve.jpg"]
     }
   ];
 
@@ -225,7 +218,14 @@ export default function Home() {
   const [showShareHub, setShowShareHub] = useState(false);
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
   const [showVIPModal, setShowVIPModal] = useState(false);
-  const [showBrandMenu, setShowBrandMenu] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [memory, setMemory] = useState<string[]>([]);
+  const [memoryDraft, setMemoryDraft] = useState("");
+  const [buildName, setBuildName] = useState("");
+  const [buildAge, setBuildAge] = useState("24");
+  const [buildLook, setBuildLook] = useState(LOOKS[0].id);
+  const [buildVoice, setBuildVoice] = useState(VOICES[0].label);
+  const [buildLine, setBuildLine] = useState("");
   const [isVIP, setIsVIP] = useState(false);
   const [copiedBTC, setCopiedBTC] = useState(false);
   const [userTotalSpent, setUserTotalSpent] = useState(25.0); // Default Bronze for testing
@@ -255,6 +255,81 @@ export default function Home() {
   // Welcome Kiss
   const [showIntro, setShowIntro] = useState(false);
   const [kissTriggered, setKissTriggered] = useState(false);
+
+  useEffect(() => {
+    const extraRaw = localStorage.getItem("velvet_companions");
+    let merged = defaultCompanions;
+    if (extraRaw) {
+      try {
+        const extra = JSON.parse(extraRaw);
+        if (Array.isArray(extra) && extra.length) merged = [...extra, ...defaultCompanions];
+      } catch {
+        /* keep the built-in list */
+      }
+    }
+    setCompanions(merged);
+    const active = localStorage.getItem("velvet_active");
+    const found = merged.find((item) => item.id === active);
+    if (found) {
+      setSelectedGirl(found);
+      setActiveTab("chats");
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("velvet_active", selectedGirl.id);
+    const raw = localStorage.getItem(`velvet_memory_${selectedGirl.id}`);
+    if (!raw) {
+      setMemory([]);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      setMemory(Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string").slice(0, 12) : []);
+    } catch {
+      setMemory([]);
+    }
+  }, [selectedGirl.id]);
+
+  const writeMemory = (next: string[]) => {
+    const trimmed = next.slice(0, 12);
+    setMemory(trimmed);
+    localStorage.setItem(`velvet_memory_${selectedGirl.id}`, JSON.stringify(trimmed));
+  };
+
+  const createCompanion = () => {
+    const look = LOOKS.find((item) => item.id === buildLook) ?? LOOKS[0];
+    const voice = VOICES.find((item) => item.label === buildVoice) ?? VOICES[0];
+    const age = Math.min(45, Math.max(21, Number(buildAge) || 24));
+    const name = buildName.trim() || "Vesper";
+    const line = buildLine.trim() || "Tell me one thing you want me to keep.";
+    const companion: Companion = {
+      id: `own_${Date.now()}`,
+      name,
+      age,
+      tagline: line,
+      category: "Yours",
+      avatar: look.src,
+      video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      voiceIntro: `Hi. I'm ${name}.`,
+      initialMessage: line,
+      tags: ["Yours", look.label, voice.label],
+      intimacy: 40,
+      vaultPhotos: [look.src],
+      voice,
+    };
+    setCompanions((prev) => {
+      const next = [companion, ...prev];
+      localStorage.setItem(
+        "velvet_companions",
+        JSON.stringify(next.filter((item) => item.id.startsWith("own_"))),
+      );
+      return next;
+    });
+    setSelectedGirl(companion);
+    setActiveTab("chats");
+    setShowBuilder(false);
+  };
 
   // Deep-Linking: Auto-opens companion or promo from shared URLs
   useEffect(() => {
@@ -321,8 +396,8 @@ export default function Home() {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(phrase);
-      u.pitch = 1.2;
-      u.rate = 0.95;
+      u.pitch = selectedGirl.voice?.pitch ?? 1.15;
+      u.rate = selectedGirl.voice?.rate ?? 0.95;
       window.speechSynthesis.speak(u);
     }
   };
@@ -352,6 +427,7 @@ export default function Home() {
           companionId: selectedGirl.id,
           message: text,
           intimacyLevel: selectedGirl.intimacy,
+          memories: memory,
           conversationHistory: history.slice(-8).map((item) => ({
             sender: item.sender === "user" ? "user" : "companion",
             text: item.text,
@@ -777,6 +853,12 @@ export default function Home() {
 
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
+                    onClick={() => setShowBuilder(true)}
+                    className="px-4 py-2.5 rounded-xl bg-white text-black font-bold text-xs"
+                  >
+                    Make your own
+                  </button>
+                  <button
                     onClick={() => setShowImporterModal(true)}
                     className="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-pink-600/30 transition-all active:scale-95"
                   >
@@ -937,6 +1019,24 @@ export default function Home() {
                 <SlidersHorizontal className="w-4 h-4" />
               </button>
             </div>
+          </div>
+
+          <div className="lg:hidden border-b border-white/10 px-4 py-3 space-y-2">
+            <p className="text-[11px] font-bold text-zinc-300">With {selectedGirl.name}. What she keeps</p>
+            <p className="text-[11px] text-zinc-400">{memory.length ? memory.join(" · ") : "Nothing saved yet."}</p>
+            <form
+              className="flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const fact = memoryDraft.trim();
+                if (!fact || memory.includes(fact)) return;
+                writeMemory([fact, ...memory]);
+                setMemoryDraft("");
+              }}
+            >
+              <input value={memoryDraft} onChange={(event) => setMemoryDraft(event.target.value)} placeholder="Add a fact" className="min-w-0 flex-1 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white" />
+              <button type="submit" className="rounded-xl bg-pink-600 px-3 text-[11px] font-bold text-white">Keep</button>
+            </form>
           </div>
 
           {/* Chat Messages */}
@@ -1103,14 +1203,32 @@ export default function Home() {
 
             {/* Intimacy / Affection Progress Bar */}
             <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
-              <div className="flex justify-between items-center text-xs font-bold">
-                <span className="text-zinc-400">Intimacy: <strong className="text-pink-500">Level 3 (Crush)</strong></span>
-                <span className="text-pink-500">{selectedGirl.intimacy}%</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-black/40 overflow-hidden">
-                <div style={{ width: `${selectedGirl.intimacy}%` }} className="h-full bg-gradient-to-r from-pink-600 to-purple-600 rounded-full" />
-              </div>
-              <p className="text-[10px] text-zinc-500">Send gifts or chat to unlock Level 4 Lover privileges.</p>
+              <p className="text-xs font-bold text-zinc-300">What she keeps</p>
+              {memory.length === 0 ? (
+                <p className="text-[11px] text-zinc-500">Nothing yet. Add a fact and she can use it.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {memory.map((fact) => (
+                    <li key={fact} className="flex items-start justify-between gap-2 text-[11px] text-zinc-200">
+                      <span>{fact}</span>
+                      <button type="button" onClick={() => writeMemory(memory.filter((item) => item !== fact))} className="text-zinc-500">Remove</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <form
+                className="flex gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const fact = memoryDraft.trim();
+                  if (!fact || memory.includes(fact)) return;
+                  writeMemory([fact, ...memory]);
+                  setMemoryDraft("");
+                }}
+              >
+                <input value={memoryDraft} onChange={(event) => setMemoryDraft(event.target.value)} placeholder="She takes her coffee black" className="min-w-0 flex-1 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white" />
+                <button type="submit" className="rounded-xl bg-pink-600 px-3 text-[11px] font-bold text-white">Keep</button>
+              </form>
             </div>
 
             <div className="space-y-2.5">
@@ -1176,6 +1294,42 @@ export default function Home() {
               <PhoneOff className="w-7 h-7" />
             </button>
           </div>
+        </div>
+      )}
+
+      {showBuilder && (
+        <div className="fixed inset-0 z-[180] bg-black/80 flex items-end sm:items-center justify-center p-4">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              createCompanion();
+            }}
+            className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#0E0C15] p-5 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-black">Make your own</h2>
+              <button type="button" onClick={() => setShowBuilder(false)} className="text-sm text-zinc-400">Close</button>
+            </div>
+            <p className="text-xs text-zinc-400">Pick one face. It stays hers. Voice is how she sounds on this device.</p>
+            <input value={buildName} onChange={(event) => setBuildName(event.target.value)} placeholder="Name" className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-sm" />
+            <input value={buildAge} onChange={(event) => setBuildAge(event.target.value)} inputMode="numeric" placeholder="Age, 21 or older" className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-sm" />
+            <textarea value={buildLine} onChange={(event) => setBuildLine(event.target.value)} placeholder="One line about her" className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-sm" rows={2} />
+            <div className="flex gap-2 overflow-x-auto">
+              {LOOKS.map((look) => (
+                <button type="button" key={look.id} onClick={() => setBuildLook(look.id)} className={`shrink-0 rounded-xl border p-1 ${buildLook === look.id ? "border-pink-500" : "border-white/10"}`}>
+                  <img src={look.src} alt={look.label} className="h-20 w-16 rounded-lg object-cover" />
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {VOICES.map((voice) => (
+                <button type="button" key={voice.label} onClick={() => setBuildVoice(voice.label)} className={`rounded-full border px-3 py-1 text-xs ${buildVoice === voice.label ? "border-pink-500 text-pink-300" : "border-white/10 text-zinc-300"}`}>
+                  {voice.label}
+                </button>
+              ))}
+            </div>
+            <button type="submit" className="w-full rounded-full bg-pink-600 py-3 text-sm font-bold">Stay with her</button>
+          </form>
         </div>
       )}
 

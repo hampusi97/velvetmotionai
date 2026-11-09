@@ -23,7 +23,7 @@ export function ReengagementEngine({ activeCompanionName = "Chloe" }: { activeCo
           if (typeof Notification !== "undefined" && Notification.permission === "granted" && !notificationSent) {
             new Notification(`${activeCompanionName} 💕`, {
               body: `omg I miss you... come back and see what I'm wearing! ✨`,
-              icon: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=192&q=80"
+              icon: "/portraits/chloe.jpg"
             });
             setNotificationSent(true);
           }
