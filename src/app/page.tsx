@@ -10,6 +10,8 @@ import {
   Paperclip, Shield, HardDrive, CheckCircle2
 } from "lucide-react";
 import { PermissionsModal } from "../components/PermissionsModal";
+import { VelvetGramModal } from "../components/VelvetGramModal";
+import { GachaMachineModal } from "../components/GachaMachineModal";
 import { ShareHubModal } from "../components/ShareHubModal";
 import { ReengagementEngine } from "../components/ReengagementEngine";
 import { VIPLoyaltyModal } from "../components/VIPLoyaltyModal";
@@ -141,6 +143,10 @@ export default function Home() {
 
   // Modals
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [showGramModal, setShowGramModal] = useState(false);
+  const [showGachaModal, setShowGachaModal] = useState(false);
+  const [gemsCount, setGemsCount] = useState(65);
+  const [activeDateScenario, setActiveDateScenario] = useState<{ scene: string; choices: string[] } | null>(null);
   const [showShareHub, setShowShareHub] = useState(false);
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
   const [showVIPModal, setShowVIPModal] = useState(false);
@@ -353,6 +359,44 @@ export default function Home() {
     }
   };
 
+  // Trigger Interactive Branching Date Scenario
+  const handleStartDateScenario = () => {
+    const scenarios = [
+      {
+        scene: "We just sat down at a private candlelit rooftop lounge overlooking the neon skyline. The waiter pours two glasses of vintage champagne. I gaze at you and smile softly... What do you do?",
+        choices: [
+          "Take her hand across the table and smile warmly",
+          "Whisper a flirty secret in her ear",
+          "Raise your glass for a romantic midnight toast"
+        ]
+      },
+      {
+        scene: "We are taking a slow late-night drive along the coastal cliffs in my convertible. The cool ocean breeze blows through my hair as I look over at you at the red light... What do you do?",
+        choices: [
+          "Reach over and gently brush the hair from her face",
+          "Turn up the music and speed down the open highway",
+          "Pull over to the viewpoint and watch the stars together"
+        ]
+      }
+    ];
+    const picked = scenarios[Math.floor(Math.random() * scenarios.length)];
+    setActiveDateScenario(picked);
+
+    const dateMsg: Message = {
+      id: `m_date_${Date.now()}`,
+      sender: "companion",
+      text: `🥂 *Interactive Date Scenario:* ${picked.scene}`,
+      timestamp: "Just now"
+    };
+    setMessages(prev => [...prev, dateMsg]);
+    playVoice(picked.scene.replace(/\*.*?\*/g, ""));
+  };
+
+  const handleChooseOption = (choice: string) => {
+    setActiveDateScenario(null);
+    handleSend(choice);
+  };
+
   // Companion Sends In-Chat Selfie
   const handleRequestSelfie = () => {
     const reqMsg: Message = {
@@ -489,6 +533,22 @@ export default function Home() {
           >
             <Link2 className="w-3.5 h-3.5" />
             <span>Share Links</span>
+          </button>
+
+          {/* 🎬 Velvet Gram Vertical Reels Button */}
+          <button
+            onClick={() => setShowGramModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-600/15 border border-pink-500/40 text-pink-400 hover:bg-pink-600 hover:text-white text-xs font-bold transition-all"
+          >
+            <span>🎬</span> Reels
+          </button>
+
+          {/* 🎰 Gacha Capsule Machine Button */}
+          <button
+            onClick={() => setShowGachaModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600/15 border border-purple-500/40 text-purple-400 hover:bg-purple-600 hover:text-white text-xs font-bold transition-all"
+          >
+            <span>🎰</span> Gacha (💎{gemsCount})
           </button>
 
           {/* Permissions & Memory Files Center */}
@@ -665,6 +725,24 @@ export default function Home() {
           {/* Chat Input with Gallery Attachment Button */}
           <div className="p-3 sm:p-4 bg-[#0E0C15]/80 border-t border-white/[0.08] space-y-2.5">
             
+            {/* Interactive Branching Choice Buttons */}
+            {activeDateScenario && (
+              <div className="p-3 bg-black/70 rounded-2xl border border-amber-500/40 space-y-2 animate-fade-in">
+                <p className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Choose your response:</p>
+                <div className="space-y-1.5">
+                  {activeDateScenario.choices.map((c, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleChooseOption(c)}
+                      className="w-full text-left p-2.5 rounded-xl bg-white/[0.04] hover:bg-pink-600/20 hover:border-pink-500/50 border border-white/10 text-xs text-white transition-all"
+                    >
+                      👉 {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
               <label className="px-3 py-1.5 rounded-full bg-purple-600/20 border border-purple-500/40 text-purple-300 hover:bg-purple-600 hover:text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shrink-0">
                 <span>🎨</span> Style to Companion
@@ -675,6 +753,12 @@ export default function Home() {
                 className="px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-black text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
               >
                 <Camera className="w-3.5 h-3.5" /> Send My Photo
+              </button>
+              <button
+                onClick={handleStartDateScenario}
+                className="px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500 hover:text-black text-xs font-bold flex items-center gap-1.5 shrink-0"
+              >
+                🥂 Start Date Scenario
               </button>
               <button
                 onClick={handleRequestSelfie}
@@ -838,6 +922,33 @@ export default function Home() {
         onClose={() => setShowLoyaltyModal(false)}
         userTotalSpent={userTotalSpent}
         onSimulateDeposit={handleDeposit}
+      />
+
+      {/* VELVET GRAM VERTICAL REELS MODAL */}
+      <VelvetGramModal
+        isOpen={showGramModal}
+        onClose={() => setShowGramModal(false)}
+        onSelectCompanion={(id) => {
+          const found = companions.find(c => c.id === id);
+          if (found) setSelectedGirl(found);
+        }}
+      />
+
+      {/* CYBERPUNK MYSTERY GACHA CAPSULE MACHINE */}
+      <GachaMachineModal
+        isOpen={showGachaModal}
+        onClose={() => setShowGachaModal(false)}
+        gemsCount={gemsCount}
+        onSpendGems={(amt) => {
+          if (gemsCount >= amt) {
+            setGemsCount(prev => prev - amt);
+            return true;
+          }
+          return false;
+        }}
+        onWinPrize={(prize) => {
+          alert(`🎉 Congratulations! You won: ${prize}`);
+        }}
       />
 
       {/* PERMISSIONS & MEMORY FILE BACKUP MODAL */}
