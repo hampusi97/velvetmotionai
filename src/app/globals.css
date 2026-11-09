@@ -13,11 +13,8 @@ body {
   color: #FFFFFF;
   font-family: var(--font-sans);
   overflow-x: hidden;
-}
-
-::selection {
-  background-color: #FF007F;
-  color: #FFFFFF;
+  selection-background-color: #FF007F;
+  selection-color: #FFFFFF;
 }
 
 .candy-card {
@@ -37,6 +34,29 @@ body {
 .story-ring {
   background: linear-gradient(45deg, #FF007F, #D946EF, #8B5CF6);
   padding: 2px;
+}
+
+/* Heartbeat Animation */
+@keyframes heartPulse {
+  0% { transform: scale(1); }
+  14% { transform: scale(1.22); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.15); }
+  70% { transform: scale(1); }
+}
+
+.animate-heartbeat {
+  animation: heartPulse 0.85s infinite ease-in-out;
+}
+
+/* Touch Ripple Glow */
+@keyframes touchRipple {
+  0% { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.animate-touch-ripple {
+  animation: touchRipple 0.7s ease-out forwards;
 }
 
 ::-webkit-scrollbar {
