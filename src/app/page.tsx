@@ -204,7 +204,9 @@ export default function Home() {
 
   // Active Companion & Navigation
   const [companions, setCompanions] = useState<Companion[]>(defaultCompanions);
-  const [activeTab, setActiveTab] = useState<"chats" | "explore">("chats");
+  const [activeTab, setActiveTab] = useState<"chats" | "explore">("explore");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedGirl, setSelectedGirl] = useState<Companion>(defaultCompanions[0]);
   const [showRightDrawer, setShowRightDrawer] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -250,7 +252,7 @@ export default function Home() {
   const [callConnected, setCallConnected] = useState(false);
 
   // Welcome Kiss
-  const [showIntro, setShowIntro] = useState(true);
+  const [showIntro, setShowIntro] = useState(false);
   const [kissTriggered, setKissTriggered] = useState(false);
 
   // Deep-Linking: Auto-opens companion or promo from shared URLs
@@ -603,12 +605,43 @@ export default function Home() {
       {/* Top App Header */}
       <header className="h-14 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between bg-[#07060A]/90 backdrop-blur-xl shrink-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-600 to-purple-600 p-[2px]">
+          <div
+            onClick={() => setActiveTab("explore")}
+            className="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-600 to-purple-600 p-[2px] cursor-pointer hover:scale-105 transition-transform"
+          >
             <div className="w-full h-full bg-[#07060A] rounded-[10px] flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-pink-500" />
             </div>
           </div>
-          <span className="text-lg font-black tracking-tight">VELVET<span className="text-pink-500">MOTION</span></span>
+          <span
+            onClick={() => setActiveTab("explore")}
+            className="text-lg font-black tracking-tight cursor-pointer hover:opacity-90"
+          >
+            VELVET<span className="text-pink-500">MOTION</span>
+          </span>
+
+          <nav className="flex items-center gap-1 bg-black/50 p-1 rounded-xl border border-white/10 ml-2">
+            <button
+              onClick={() => setActiveTab("explore")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                activeTab === "explore"
+                  ? "bg-pink-600 text-white shadow-lg shadow-pink-600/30"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              🔥 Explore
+            </button>
+            <button
+              onClick={() => setActiveTab("chats")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                activeTab === "chats"
+                  ? "bg-pink-600 text-white shadow-lg shadow-pink-600/30"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              💬 Private Room ({selectedGirl.name})
+            </button>
+          </nav>
         </div>
 
         <div className="flex items-center gap-3">
