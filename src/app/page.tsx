@@ -61,8 +61,10 @@ function localReply(name: string, tagline: string, backstory: string, facts: str
   if (userText.trim().endsWith("?")) {
     return relevant ? `From what is saved here: ${relevant}.` : "I don't have that yet. Tell me and I'll keep it on this phone.";
   }
-  if (relevant) return `I'll hold that next to this: ${relevant}.`;
-  return story ? `I'm still ${name}. ${story.slice(0, 140)}` : `I'm here. Tell me one thing you want me to keep.`;
+  if (relevant) return `I heard you. "${userText.trim().slice(0, 120)}" I'll keep that with this: ${relevant}.`;
+  return story
+    ? `I heard you. "${userText.trim().slice(0, 120)}" I'm still ${name}.`
+    : `I heard you. "${userText.trim().slice(0, 120)}" Tell me one thing you want me to keep.`;
 }
 
 interface Message {
@@ -988,9 +990,17 @@ export default function Home() {
                         <div className="absolute inset-x-0 bottom-0 p-4">
                           <h3 className="text-xl font-semibold tracking-tight text-white">{girl.name}, {girl.age}</h3>
                           <p className="mt-1 line-clamp-2 text-sm leading-snug text-white/80">{girl.tagline}</p>
-                          <span className="mt-3 inline-flex h-9 items-center rounded-full bg-white px-4 text-xs font-semibold text-black">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelectedGirl(girl);
+                              setActiveTab("chats");
+                            }}
+                            className="mt-3 inline-flex h-9 items-center rounded-full bg-white px-4 text-xs font-semibold text-black"
+                          >
                             Talk
-                          </span>
+                          </button>
                         </div>
                       </div>
                     </div>
