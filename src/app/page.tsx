@@ -1050,6 +1050,8 @@ export default function Home() {
                 {liveModel ? "Live model on" : "Free"}
               </button>
               <button
+                type="button"
+                aria-label="Details"
                 onClick={() => setShowRightDrawer(!showRightDrawer)}
                 className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10"
               >

@@ -18,38 +18,31 @@ export function ShareHubModal({ isOpen, onClose }: ShareHubModalProps) {
   const shareLinks = [
     {
       key: "main",
-      title: "🌟 Main App (Viral Referral Link)",
-      desc: "Earns you 30% Bitcoin rev-share & gives visitors +50 free gems.",
-      url: `${origin}/?ref=vip_invite`,
-      badge: "30% Rev-Share"
+      title: "VelvetMotion",
+      desc: "Opens the portrait list.",
+      url: `${origin}/`,
+      badge: "Home"
     },
     {
       key: "chloe",
-      title: "🎀 Direct Link to Chloe (Sweetheart)",
-      desc: "Opens immediately into Chloe's private chat & video room.",
+      title: "Chloe",
+      desc: "Opens Chloe.",
       url: `${origin}/?girl=chloe`,
-      badge: "Direct Chat"
+      badge: "Room"
     },
     {
       key: "elena",
-      title: "⚡ Direct Link to Elena (Cyberpunk)",
-      desc: "Opens immediately into Elena's cyberpunk street racer room.",
+      title: "Elena",
+      desc: "Opens Elena.",
       url: `${origin}/?girl=elena`,
-      badge: "Direct Chat"
+      badge: "Room"
     },
     {
       key: "aria",
-      title: "🌸 Direct Link to Aria (Tokyo Waifu)",
-      desc: "Opens directly into Aria's streaming bedroom.",
+      title: "Aria",
+      desc: "Opens Aria.",
       url: `${origin}/?girl=aria`,
-      badge: "Direct Chat"
-    },
-    {
-      key: "vip",
-      title: "👑 VIP Promo Checkout Link",
-      desc: "Opens directly to the Bitcoin & Card VIP Pass upgrade.",
-      url: `${origin}/?promo=vip`,
-      badge: "VIP Checkout"
+      badge: "Room"
     }
   ];
 
@@ -109,7 +102,7 @@ export function ShareHubModal({ isOpen, onClose }: ShareHubModalProps) {
         </div>
 
         <p className="text-[11px] text-zinc-500">
-          Tip: Visitors who open any link with your referral code earn you 30% Bitcoin revenue share!
+          A copied link opens that person. Nothing is charged.
         </p>
       </div>
     </div>
