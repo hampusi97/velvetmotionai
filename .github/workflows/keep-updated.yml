@@ -1,0 +1,28 @@
+name: Keep updated
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: The app still builds
+        run: npm run build
+      - name: Portraits still match the app
+        run: node scripts/keep-updated.mjs
+      - name: The live site still matches
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          CHECK_LIVE: "1"
+        run: node scripts/keep-updated.mjs

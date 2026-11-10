@@ -236,6 +236,7 @@ export default function Home() {
   const [showImporterModal, setShowImporterModal] = useState(false);
   const [activeDateScenario, setActiveDateScenario] = useState<{ scene: string; choices: string[] } | null>(null);
   const [showShareHub, setShowShareHub] = useState(false);
+  const [showBrandMenu, setShowBrandMenu] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const [memory, setMemory] = useState<string[]>([]);
   const [memoryDraft, setMemoryDraft] = useState("");
