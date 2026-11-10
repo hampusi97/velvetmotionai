@@ -28,18 +28,41 @@ function readFacts(id: string) {
   }
 }
 
-function localReply(backstory: string, facts: string[], userText: string) {
+function factFrom(text: string) {
+  const trimmed = text.trim();
+  const remember = trimmed.match(/^remember(?: that| this)?[:\s]+(.{3,80})$/i);
+  if (remember) return remember[1].trim().replace(/[.?!]$/, "");
+  if (/^i (?:am|'m|like|love|have|work|live)\b/i.test(trimmed) && trimmed.length < 80 && !trimmed.includes("?")) {
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).replace(/[.?!]$/, "");
+  }
+  const mine = trimmed.match(/^my ([a-z]{2,20}) is ([^.?!]{2,40})/i);
+  if (mine) return `Your ${mine[1]} is ${mine[2].trim()}`;
+  return null;
+}
+
+function localReply(name: string, tagline: string, backstory: string, facts: string[], userText: string) {
   const story = backstory.trim();
-  const fact = facts[0];
-  const asked = /who are you|about you|your story|remember/i.test(userText);
-  if (asked && story) return story.slice(0, 280);
-  if (asked && fact) return `I still have this, and I will not drop it: ${fact}.`;
-  const lines = [
-    fact ? `I keep coming back to this: ${fact}.` : "I'm here. Tell me one thing worth keeping.",
-    story ? `That still has to fit this: ${story.slice(0, 160)}` : "Say it again if you want me to keep it.",
-    fact ? `You asked me to hold onto ${fact}. I am still holding it.` : "Nothing leaves this phone unless Live model is on.",
-  ];
-  return lines[userText.length % lines.length];
+  const lower = userText.toLowerCase();
+  const words = lower.split(/\W+/).filter((word) => word.length > 3);
+  const relevant = facts.find((fact) => words.some((word) => fact.toLowerCase().includes(word))) || facts[0];
+
+  if (/^(hi|hey|hello|yo)\b/i.test(userText)) {
+    return relevant ? `Hey. I'm ${name}. I still have this: ${relevant}.` : `Hey. I'm ${name}. ${tagline}`;
+  }
+  if (/who are you|about you|your story/i.test(lower)) {
+    return story || `${name}. ${tagline}`;
+  }
+  if (/what do you remember|what do you know about me/i.test(lower)) {
+    return facts.length ? `I have ${facts.length} things. ${facts.slice(0, 3).join(". ")}.` : "Nothing yet. Say 'remember that …' and it stays on this phone.";
+  }
+  if (/\bremember\b/i.test(lower)) {
+    return relevant ? `Kept here. ${relevant}.` : "Say it as 'remember that …' and it stays on this phone.";
+  }
+  if (userText.trim().endsWith("?")) {
+    return relevant ? `From what is saved here: ${relevant}.` : "I don't have that yet. Tell me and I'll keep it on this phone.";
+  }
+  if (relevant) return `I'll hold that next to this: ${relevant}.`;
+  return story ? `I'm still ${name}. ${story.slice(0, 140)}` : `I'm here. Tell me one thing you want me to keep.`;
 }
 
 interface Message {
@@ -438,7 +461,13 @@ export default function Home() {
     setIsTyping(true);
 
     if (!liveModel) {
-      const reply = localReply(backstory, memory, text);
+      const captured = factFrom(text);
+      let facts = memory;
+      if (captured && !memory.some((fact) => fact.toLowerCase() === captured.toLowerCase())) {
+        facts = [captured, ...memory].slice(0, 8);
+        writeMemory(facts);
+      }
+      const reply = localReply(selectedGirl.name, selectedGirl.tagline, backstory, facts, text);
       setMessages((prev) => [
         ...prev,
         { id: `c_${Date.now()}`, sender: "companion", text: reply, timestamp: "Just now" },
@@ -869,7 +898,7 @@ export default function Home() {
                     The Velvet<span className="text-pink-500">Motion</span> room
                   </h1>
                   <p className="text-xs sm:text-sm text-zinc-300 max-w-xl leading-relaxed">
-                    Pick one person. Her face, her backstory, and this chat stay on this device. A reply only leaves the phone if you turn Live model on.
+                    Pick one person. Free chat stays on this phone and uses only what you saved. Live model is optional, and it is the only reply that leaves the device.
                   </p>
                 </div>
 
@@ -993,7 +1022,7 @@ export default function Home() {
                   </span>
                 </h3>
                 <p className="text-[11px] text-white/50">
-                  {liveModel ? "Live model" : "On this device"}
+                  {liveModel ? "Live model" : "Free on this phone"}
                 </p>
               </div>
             </div>
@@ -1008,7 +1037,7 @@ export default function Home() {
                 }}
                 className={`px-3.5 py-1.5 rounded-full border text-xs font-bold ${liveModel ? "border-amber-400 text-amber-200" : "border-emerald-500/40 text-emerald-300"}`}
               >
-                {liveModel ? "Live model on" : "On this device"}
+                {liveModel ? "Live model on" : "Free"}
               </button>
               <button
                 onClick={() => setShowRightDrawer(!showRightDrawer)}
