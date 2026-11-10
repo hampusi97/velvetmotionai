@@ -12,9 +12,14 @@ import {
 import { PermissionsModal } from "../components/PermissionsModal";
 import { VelvetGramModal } from "../components/VelvetGramModal";
 import { CharacterImporterModal, ImportedCompanion } from "../components/CharacterImporterModal";
+import { CharacterCreatorModal, CreatedCompanion } from "../components/CharacterCreatorModal";
+import { MediaGalleryModal } from "../components/MediaGalleryModal";
+import { GachaMachineModal } from "../components/GachaMachineModal";
+import { VIPLoyaltyModal } from "../components/VIPLoyaltyModal";
+import { VIPModal } from "../components/Monetization";
 import { ShareHubModal } from "../components/ShareHubModal";
 import { ReengagementEngine } from "../components/ReengagementEngine";
-import { Link2, ArrowLeft } from "lucide-react";
+import { Link2, ArrowLeft, Crown, Film, Trophy } from "lucide-react";
 import { saveCompanionMemory, loadCompanionMemory } from "../lib/db";
 import { SceneChoices } from "../components/SceneChoices";
 import { CompanionBond, StoryStudio } from "../components/StoryStudio";
@@ -272,9 +277,21 @@ export default function Home() {
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [showGramModal, setShowGramModal] = useState(false);
   const [showImporterModal, setShowImporterModal] = useState(false);
+  const [showCreatorModal, setShowCreatorModal] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [showGachaModal, setShowGachaModal] = useState(false);
+  const [showVIPModal, setShowVIPModal] = useState(false);
+  const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
   const [showShareHub, setShowShareHub] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
+  
+  // Economy & VIP Token Balance
+  const [gems, setGems] = useState(30);
+  const [coins, setCoins] = useState(150);
+  const [isVIP, setIsVIP] = useState(false);
+  const [userTotalSpent, setUserTotalSpent] = useState(0);
+
   const [memory, setMemory] = useState<string[]>([]);
   const [memoryDraft, setMemoryDraft] = useState("");
   const [buildName, setBuildName] = useState("");
@@ -296,6 +313,18 @@ export default function Home() {
   const [kissTriggered, setKissTriggered] = useState(false);
 
   useEffect(() => {
+    // Load economy and VIP status
+    try {
+      const storedGems = localStorage.getItem("velvet_gems");
+      if (storedGems) setGems(Number(storedGems));
+      const storedCoins = localStorage.getItem("velvet_coins");
+      if (storedCoins) setCoins(Number(storedCoins));
+      const storedVIP = localStorage.getItem("velvet_vip");
+      if (storedVIP === "true") setIsVIP(true);
+      const storedSpent = localStorage.getItem("velvet_spent");
+      if (storedSpent) setUserTotalSpent(Number(storedSpent));
+    } catch {}
+
     const extraRaw = localStorage.getItem("velvet_companions");
     let merged = defaultCompanions;
     if (extraRaw) {
@@ -603,6 +632,77 @@ export default function Home() {
     setShowImporterModal(false);
   };
 
+  // Custom Character Creation Wizard Handler
+  const handleCreateCompanionFromWizard = (newComp: CreatedCompanion) => {
+    const companion: Companion = {
+      id: newComp.id,
+      name: newComp.name,
+      age: newComp.age,
+      tagline: newComp.tagline,
+      category: newComp.category,
+      avatar: newComp.avatar,
+      video: newComp.video || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      voiceIntro: newComp.voiceIntro || `Hello, I'm ${newComp.name}.`,
+      initialMessage: newComp.initialMessage,
+      tags: newComp.tags || ["Custom", newComp.category],
+      intimacy: newComp.intimacy || 60,
+      vaultPhotos: newComp.vaultPhotos || [newComp.avatar],
+      voice: newComp.voice,
+      backstory: newComp.backstory,
+    };
+    if (newComp.backstory) {
+      localStorage.setItem(`velvet_backstory_${companion.id}`, newComp.backstory);
+    }
+    setCompanions((prev) => {
+      const next = [companion, ...prev.filter(item => item.id !== companion.id)];
+      localStorage.setItem(
+        "velvet_companions",
+        JSON.stringify(next.filter((item) => !defaultCompanions.some(original => original.id === item.id)))
+      );
+      return next;
+    });
+    setSelectedGirl(companion);
+    setActiveTab("chats");
+    setShowCreatorModal(false);
+    setNotice(`✨ Created ${companion.name}! Welcome to her private chamber.`);
+  };
+
+  // Central Media Gallery Selection Handler
+  const handleSelectCompanionFromMedia = (companionId: string) => {
+    const found = companions.find(c => c.id.toLowerCase() === companionId.toLowerCase());
+    if (found) {
+      setSelectedGirl(found);
+      setActiveTab("chats");
+    }
+  };
+
+  // Gacha & Gem Economy Handlers
+  const handleSpendGems = (amount: number) => {
+    if (gems < amount) return false;
+    const next = gems - amount;
+    setGems(next);
+    localStorage.setItem("velvet_gems", next.toString());
+    return true;
+  };
+
+  const handleWinGachaPrize = (prizeName: string) => {
+    setNotice(`🎁 Gacha Prize: ${prizeName}!`);
+  };
+
+  const handleSimulateDeposit = (amount: number) => {
+    const nextSpent = userTotalSpent + amount;
+    setUserTotalSpent(nextSpent);
+    localStorage.setItem("velvet_spent", nextSpent.toString());
+    if (nextSpent >= 15) {
+      setIsVIP(true);
+      localStorage.setItem("velvet_vip", "true");
+    }
+    const bonusGems = gems + amount * 5;
+    setGems(bonusGems);
+    localStorage.setItem("velvet_gems", bonusGems.toString());
+    setNotice(`💰 Deposited $${amount}! Earned +${amount * 5} Free Gems.`);
+  };
+
   const handleRequestSelfie = () => {
     if (historyCompanionId !== selectedGirl.id) return;
     const photo = selectedGirl.vaultPhotos[0] || selectedGirl.avatar;
@@ -743,11 +843,57 @@ export default function Home() {
             >
               Stories
             </button>
+            <button
+              type="button"
+              onClick={() => setShowGramModal(true)}
+              className="px-3 py-1 rounded-lg text-xs font-bold text-zinc-400 hover:text-white transition-all hidden sm:flex items-center gap-1"
+            >
+              <Film className="w-3.5 h-3.5 text-pink-400" /> Reels
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowGalleryModal(true)}
+              className="px-3 py-1 rounded-lg text-xs font-bold text-zinc-400 hover:text-white transition-all hidden sm:flex items-center gap-1"
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-purple-400" /> Gallery
+            </button>
           </nav>
         </div>
 
         <div className="relative flex items-center gap-2">
+          {/* Economy Badges */}
+          <button
+            onClick={() => setShowGachaModal(true)}
+            title="Spin Mystery Gacha"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/40 text-purple-300 text-xs font-bold transition-all"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span>{gems} Gems</span>
+          </button>
+
+          <button
+            onClick={() => setShowVIPModal(true)}
+            title="VIP Membership & Rewards"
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${
+              isVIP
+                ? "bg-gradient-to-r from-amber-500/30 to-yellow-500/30 border-amber-400 text-amber-300 shadow-md shadow-amber-500/20"
+                : "bg-white/5 hover:bg-white/10 border-white/15 text-zinc-300 hover:text-white"
+            }`}
+          >
+            <Crown className={`w-3.5 h-3.5 ${isVIP ? "text-amber-400 fill-amber-400" : "text-amber-400"}`} />
+            <span>{isVIP ? "VIP Active" : "VIP Pass"}</span>
+          </button>
+
           <div className={`${showBrandMenu ? "flex" : "hidden"} xl:flex absolute right-0 top-12 z-40 w-52 flex-col gap-2 rounded-2xl border border-white/10 bg-[#0E0C15] p-3 shadow-2xl xl:static xl:w-auto xl:flex-row xl:items-center xl:border-0 xl:bg-transparent xl:p-0 xl:shadow-none`}>
+            <button onClick={() => { setShowGalleryModal(true); setShowBrandMenu(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-purple-500/30 text-purple-300 text-xs font-bold xl:hidden">
+              <ImageIcon className="w-3.5 h-3.5" /> Gallery Vault
+            </button>
+            <button onClick={() => { setShowGramModal(true); setShowBrandMenu(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-pink-500/30 text-pink-300 text-xs font-bold xl:hidden">
+              <Film className="w-3.5 h-3.5" /> Velvet Reels
+            </button>
+            <button onClick={() => { setShowLoyaltyModal(true); setShowBrandMenu(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-500/40 text-amber-300 text-xs font-bold">
+              <Trophy className="w-3.5 h-3.5" /> High-Rollers
+            </button>
             <button onClick={() => { setShowShareHub(true); setShowBrandMenu(false); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-pink-500/40 text-pink-300 text-xs font-bold">
               <Link2 className="w-3.5 h-3.5" /> Share
             </button>
