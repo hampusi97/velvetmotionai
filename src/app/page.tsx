@@ -16,6 +16,8 @@ import { ShareHubModal } from "../components/ShareHubModal";
 import { ReengagementEngine } from "../components/ReengagementEngine";
 import { Link2, ArrowLeft } from "lucide-react";
 import { saveCompanionMemory, loadCompanionMemory } from "../lib/db";
+import { SceneChoices } from "../components/SceneChoices";
+import { CompanionBond, StoryStudio } from "../components/StoryStudio";
 
 function readFacts(id: string) {
   const raw = localStorage.getItem(`velvet_memory_${id}`);
@@ -242,7 +244,7 @@ export default function Home() {
 
   // Active Companion & Navigation
   const [companions, setCompanions] = useState<Companion[]>(defaultCompanions);
-  const [activeTab, setActiveTab] = useState<"chats" | "explore">("explore");
+  const [activeTab, setActiveTab] = useState<"chats" | "explore" | "stories">("explore");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedGirl, setSelectedGirl] = useState<Companion>(defaultCompanions[0]);
@@ -257,7 +259,6 @@ export default function Home() {
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [showGramModal, setShowGramModal] = useState(false);
   const [showImporterModal, setShowImporterModal] = useState(false);
-  const [activeDateScenario, setActiveDateScenario] = useState<{ scene: string; choices: string[] } | null>(null);
   const [showShareHub, setShowShareHub] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
@@ -609,44 +610,6 @@ export default function Home() {
     setShowImporterModal(false);
   };
 
-  // Trigger Interactive Branching Date Scenario
-  const handleStartDateScenario = () => {
-    const scenarios = [
-      {
-        scene: "We just sat down at a private candlelit rooftop lounge overlooking the neon skyline. The waiter pours two glasses of vintage champagne. I gaze at you and smile softly... What do you do?",
-        choices: [
-          "Take her hand across the table and smile warmly",
-          "Whisper a flirty secret in her ear",
-          "Raise your glass for a romantic midnight toast"
-        ]
-      },
-      {
-        scene: "We are taking a slow late-night drive along the coastal cliffs in my convertible. The cool ocean breeze blows through my hair as I look over at you at the red light... What do you do?",
-        choices: [
-          "Reach over and gently brush the hair from her face",
-          "Turn up the music and speed down the open highway",
-          "Pull over to the viewpoint and watch the stars together"
-        ]
-      }
-    ];
-    const picked = scenarios[Math.floor(Math.random() * scenarios.length)];
-    setActiveDateScenario(picked);
-
-    const dateMsg: Message = {
-      id: `m_date_${Date.now()}`,
-      sender: "companion",
-      text: `🥂 *Interactive Date Scenario:* ${picked.scene}`,
-      timestamp: "Just now"
-    };
-    setMessages(prev => [...prev, dateMsg]);
-    playVoice(picked.scene.replace(/\*.*?\*/g, ""));
-  };
-
-  const handleChooseOption = (choice: string) => {
-    setActiveDateScenario(null);
-    handleSend(choice);
-  };
-
   // Companion Sends In-Chat Selfie
   const handleRequestSelfie = () => {
     const reqMsg: Message = {
@@ -792,6 +755,18 @@ export default function Home() {
             >
               Room
             </button>
+            <button
+              type="button"
+              data-testid="stories-tab"
+              onClick={() => setActiveTab("stories")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                activeTab === "stories"
+                  ? "bg-pink-600 text-white shadow-lg shadow-pink-600/30"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              Stories
+            </button>
           </nav>
         </div>
 
@@ -834,6 +809,17 @@ export default function Home() {
                   <Flame className="w-3.5 h-3.5" /> Explore
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("stories")}
+                className={`w-full mt-2 py-2 px-3 rounded-xl border text-xs font-bold ${
+                  activeTab === "stories"
+                    ? "bg-pink-600 text-white border-pink-500"
+                    : "bg-white/[0.04] text-zinc-200 border-white/10"
+                }`}
+              >
+                Stories
+              </button>
               <button
                 onClick={() => setShowImporterModal(true)}
                 className="w-full mt-2 py-2 px-3 rounded-xl bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/30 text-pink-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
@@ -903,6 +889,12 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setActiveTab("stories")}
+                    className="h-11 rounded-full bg-pink-600 px-5 text-sm font-semibold text-white"
+                  >
+                    Stories
+                  </button>
                   <button
                     onClick={() => setShowBuilder(true)}
                     className="h-11 rounded-full bg-white px-5 text-sm font-semibold text-black"
@@ -988,8 +980,21 @@ export default function Home() {
                         <div className="absolute inset-x-0 bottom-0 p-4">
                           <h3 className="text-xl font-semibold tracking-tight text-white">{girl.name}, {girl.age}</h3>
                           <p className="mt-1 line-clamp-2 text-sm leading-snug text-white/80">{girl.tagline}</p>
-                          <span className="mt-3 inline-flex h-9 items-center rounded-full bg-white px-4 text-xs font-semibold text-black">
-                            Talk
+                          <span className="mt-3 flex gap-2">
+                            <span className="inline-flex h-9 items-center rounded-full bg-white px-4 text-xs font-semibold text-black">
+                              Talk
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSelectedGirl(girl);
+                                setActiveTab("stories");
+                              }}
+                              className="inline-flex h-9 items-center rounded-full border border-white/30 bg-black/40 px-4 text-xs font-semibold text-white"
+                            >
+                              Story
+                            </button>
                           </span>
                         </div>
                       </div>
@@ -998,6 +1003,16 @@ export default function Home() {
               </div>
             </div>
           </main>
+        ) : activeTab === "stories" ? (
+          <StoryStudio
+            companions={companions}
+            focusId={selectedGirl.id}
+            onOpenChat={(id) => {
+              const found = companions.find((item) => item.id === id);
+              if (found) setSelectedGirl(found);
+              setActiveTab("chats");
+            }}
+          />
         ) : (
           <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#0B0912]">
           <img src={selectedGirl.avatar} alt="" className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-[0.14] blur-3xl" />
@@ -1105,19 +1120,11 @@ export default function Home() {
           </div>
 
           <div className="relative border-t border-white/10 bg-[#07060A]/80 p-3 backdrop-blur sm:p-4">
-            {activeDateScenario && (
-              <div className="mb-2 space-y-1.5">
-                {activeDateScenario.choices.map((c, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleChooseOption(c)}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-sm text-white"
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            )}
+            <SceneChoices
+              companion={selectedGirl}
+              onSpeak={playVoice}
+              onOpenStudio={() => setActiveTab("stories")}
+            />
             <div className="flex items-center gap-2">
               <input
                 ref={galleryInputRef}
@@ -1166,6 +1173,14 @@ export default function Home() {
                 <p className="text-xs text-white/70">{selectedGirl.category}</p>
               </div>
             </div>
+
+            <CompanionBond
+              companion={selectedGirl}
+              onOpenStudio={() => {
+                setShowRightDrawer(false);
+                setActiveTab("stories");
+              }}
+            />
 
             {/* Intimacy / Affection Progress Bar */}
             <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
