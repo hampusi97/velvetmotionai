@@ -3,6 +3,7 @@ import { saveConversation } from "@/lib/db";
 
 interface ChatRequest {
   companionId: string;
+  companionName?: string;
   message: string;
   conversationHistory?: { sender: string; text: string }[];
   intimacyLevel?: number;
@@ -91,19 +92,31 @@ const COMPANION_PROFILES: Record<string, {
   }
 };
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
+export async function GET() {
+  const usable = (key: string | undefined) => Boolean(key && key.trim().length > 20 && !/dummy|your_ai_chat_api_key|changeme|placeholder/i.test(key));
+  const configured = usable(process.env.XAI_API_KEY) || (usable(process.env.AI_CHAT_API_KEY) && Boolean(process.env.AI_CHAT_ENDPOINT));
+  return NextResponse.json({ configured, mode: configured ? "external-ai" : "local" });
+}
+
 export async function POST(req: Request) {
   try {
     const body: ChatRequest = await req.json();
-    const { companionId, message, conversationHistory = [], intimacyLevel = 50, memories = [], backstory = "", userId = "anonymous" } = body;
+    const { companionId, companionName, message, conversationHistory = [], intimacyLevel = 50, memories = [], backstory = "", userId = "anonymous" } = body;
 
-    if (!message || !message.trim()) {
+    if (typeof message !== "string" || !message.trim()) {
       return NextResponse.json({ error: "Message cannot be empty." }, { status: 400 });
     }
 
+    if (!Array.isArray(memories) || !Array.isArray(conversationHistory) || typeof backstory !== "string" || (companionId !== undefined && typeof companionId !== "string") || conversationHistory.some(item => !item || typeof item.text !== "string" || typeof item.sender !== "string")) {
+      return NextResponse.json({ error: "Invalid chat request." }, { status: 400 });
+    }
     const kept = memories.filter((item) => typeof item === "string" && item.trim()).slice(0, 8);
     const story = backstory.trim().slice(0, 600);
     const companionKey = (companionId || "chloe").toLowerCase();
-    const profile = COMPANION_PROFILES[companionKey] || COMPANION_PROFILES.chloe;
+    const profile = COMPANION_PROFILES[companionKey] || { ...COMPANION_PROFILES.chloe, name: typeof companionName === "string" && companionName.trim() ? companionName.trim().slice(0, 80) : "Companion" };
 
     // 1. Try Pluggable OpenAI-Compatible Backend if configured
     const xaiKey = (process.env.XAI_API_KEY || "").trim();
@@ -149,7 +162,7 @@ Guidelines:
         ];
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
 
         const aiResponse = await fetch(fullUrl, {
           method: "POST",
@@ -164,14 +177,12 @@ Guidelines:
             max_tokens: 300
           }),
           signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
+        }).finally(() => clearTimeout(timeoutId));
 
         if (aiResponse.ok) {
           const aiData = await aiResponse.json();
           const reply = aiData.choices?.[0]?.message?.content;
-          if (reply) {
+          if (typeof reply === "string" && reply.trim()) {
             // Save to persistent DB asynchronously
             saveConversation(userId, companionKey, "You", message).catch(() => {});
             saveConversation(userId, companionKey, profile.name, reply).catch(() => {});
@@ -185,8 +196,9 @@ Guidelines:
             });
           }
         }
-      } catch (externalErr) {
-        console.warn("External AI endpoint call failed, engaging graceful personality fallback:", externalErr);
+        return NextResponse.json({ error: "The AI service could not provide a reply. Try again shortly.", code: "provider_unavailable" }, { status: 502 });
+      } catch {
+        return NextResponse.json({ error: "The AI service timed out or could not be reached. Try again.", code: "provider_unreachable" }, { status: 504 });
       }
     }
 
@@ -210,13 +222,7 @@ Guidelines:
       source: "personality-engine",
       intimacyDelta: 3
     });
-  } catch (err: any) {
-    console.error("Chat API error:", err);
-    return NextResponse.json({
-      success: true,
-      reply: "Mmm, you make my heart beat so fast... tell me more, handsome.",
-      source: "safety-fallback",
-      intimacyDelta: 1
-    });
+  } catch {
+    return NextResponse.json({ error: "Invalid chat request." }, { status: 400 });
   }
 }

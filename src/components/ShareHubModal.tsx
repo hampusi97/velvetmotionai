@@ -9,6 +9,7 @@ interface ShareHubModalProps {
 }
 
 export function ShareHubModal({ isOpen, onClose }: ShareHubModalProps) {
+  const [copyError, setCopyError] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -20,7 +21,7 @@ export function ShareHubModal({ isOpen, onClose }: ShareHubModalProps) {
       key: "main",
       title: "VelvetMotion",
       desc: "Opens the portrait list.",
-      url: `${origin}/`,
+      url: `${origin}/?view=explore`,
       badge: "Home"
     },
     {
@@ -46,16 +47,19 @@ export function ShareHubModal({ isOpen, onClose }: ShareHubModalProps) {
     }
   ];
 
-  const handleCopy = (key: string, url: string) => {
-    navigator.clipboard.writeText(url);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
+  const handleCopy = async (key: string, url: string) => {
+    setCopyError(false);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch { setCopyError(true); }
   };
 
   return (
     <div className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4 animate-fade-in select-none">
       <div className="relative w-full max-w-lg rounded-3xl bg-[#120E1C] border border-pink-500/40 p-6 sm:p-8 shadow-2xl text-center">
-        <button onClick={onClose} className="absolute top-4 right-4 text-zinc-400 hover:text-white">
+        <button aria-label="Close share links" onClick={onClose} className="absolute top-4 right-4 text-zinc-400 hover:text-white">
           <X className="w-4 h-4" />
         </button>
 
@@ -70,6 +74,7 @@ export function ShareHubModal({ isOpen, onClose }: ShareHubModalProps) {
           Copy any of these tailored links to share on Telegram, WhatsApp, Discord, or X.
         </p>
 
+        {copyError && <p role="status" className="mt-3 text-xs text-amber-200">Clipboard access is unavailable. Select and copy the link below.</p>}
         {/* Link Cards List */}
         <div className="my-5 space-y-3 text-left max-h-[50vh] overflow-y-auto pr-1">
           {shareLinks.map((item) => (

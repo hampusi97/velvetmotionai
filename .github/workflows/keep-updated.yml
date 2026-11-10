@@ -21,6 +21,8 @@ jobs:
         run: npm test
       - name: The app still builds
         run: npm run build
+      - name: Chat provider replies and errors
+        run: npm run test:chat
       - name: Portraits still match the app
         run: node scripts/keep-updated.mjs
       - name: The live site still matches

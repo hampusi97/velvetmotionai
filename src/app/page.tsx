@@ -78,6 +78,12 @@ interface Message {
   timestamp: string;
 }
 
+function validMessage(value: unknown): value is Message {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Message;
+  return typeof item.id === "string" && (item.sender === "user" || item.sender === "companion") && typeof item.text === "string" && typeof item.timestamp === "string";
+}
+
 interface Companion {
   id: string;
   name: string;
@@ -252,6 +258,11 @@ export default function Home() {
   const [selectedGirl, setSelectedGirl] = useState<Companion>(defaultCompanions[0]);
   const [showRightDrawer, setShowRightDrawer] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [historyCompanionId, setHistoryCompanionId] = useState<string | null>(null);
+  const selectedIdRef = useRef(selectedGirl.id);
+  selectedIdRef.current = selectedGirl.id;
+  const [notice, setNotice] = useState("");
+  const [liveAvailable, setLiveAvailable] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -296,16 +307,25 @@ export default function Home() {
       }
     }
     setCompanions(merged);
-    const active = localStorage.getItem("velvet_active");
-    const found = merged.find((item) => item.id === active);
+    const params = new URLSearchParams(window.location.search);
+    const linked = params.get("girl");
+    const active = linked || localStorage.getItem("velvet_active");
+    const found = merged.find((item) => item.id.toLowerCase() === active?.toLowerCase());
     if (found) {
       setSelectedGirl(found);
-      setActiveTab("chats");
+      setActiveTab(params.get("view") === "explore" && !linked ? "explore" : "chats");
     }
   }, []);
 
   useEffect(() => {
-    setLiveModel(localStorage.getItem("velvet_live_model") === "1");
+    let cancelled = false;
+    fetch("/api/chat").then(response => response.json()).then(data => {
+      if (cancelled) return;
+      const available = data.configured === true;
+      setLiveAvailable(available);
+      setLiveModel(available && localStorage.getItem("velvet_live_model") === "1");
+    }).catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -358,7 +378,7 @@ export default function Home() {
       const next = [companion, ...prev];
       localStorage.setItem(
         "velvet_companions",
-        JSON.stringify(next.filter((item) => item.id.startsWith("own_"))),
+        JSON.stringify(next.filter((item) => !defaultCompanions.some(original => original.id === item.id))),
       );
       return next;
     });
@@ -367,73 +387,48 @@ export default function Home() {
     setShowBuilder(false);
   };
 
-  // Deep-Linking: Auto-opens companion or promo from shared URLs
+  // Load each room before allowing its history to be written.
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const girlParam = params.get("girl");
-
-      if (girlParam) {
-        const found = companions.find(c => c.id.toLowerCase() === girlParam.toLowerCase());
-        if (found) {
-          setSelectedGirl(found);
-        }
-      }
-    }
-  }, [companions]);
-
-  // Load IndexedDB chat memory on companion change
-  useEffect(() => {
+    let cancelled = false;
+    const id = selectedGirl.id;
+    setHistoryCompanionId(null);
+    setMessages([]);
+    setInputText("");
+    setIsTyping(false);
     async function loadMemory() {
-      const saved = await loadCompanionMemory(selectedGirl.id);
       let next: Message[] = [];
-      if (saved && saved.length > 0) {
-        next = saved;
-      } else {
-        const mem = localStorage.getItem(`chat_mem_${selectedGirl.id}`);
-        if (mem) {
-          try {
-            next = JSON.parse(mem);
-          } catch (e) {
-            next = [];
-          }
-        }
-        if (next.length === 0) {
-          next = [{
-            id: "m_init",
-            sender: "companion",
-            text: selectedGirl.initialMessage,
-            timestamp: "Just now"
-          }];
-        }
+      try {
+        const raw = localStorage.getItem(`chat_mem_${id}`);
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (Array.isArray(parsed)) next = parsed.filter(validMessage);
+      } catch { /* fall back to IndexedDB */ }
+      if (!next.length) {
+        const saved = await loadCompanionMemory(id);
+        if (Array.isArray(saved)) next = saved.filter(validMessage);
       }
-      const facts = readFacts(selectedGirl.id);
+      if (cancelled) return;
+      if (!next.length) next = [{ id: "m_init", sender: "companion", text: selectedGirl.initialMessage, timestamp: "Just now" }];
+      const facts = readFacts(id);
       const day = new Date().toISOString().slice(0, 10);
-      const wroteKey = `velvet_wrote_${selectedGirl.id}_${day}`;
+      const wroteKey = `velvet_wrote_${id}_${day}`;
       if (facts[0] && !localStorage.getItem(wroteKey)) {
         localStorage.setItem(wroteKey, "1");
-        next = [...next, {
-          id: `first_${Date.now()}`,
-          sender: "companion" as const,
-          text: `Before you say anything: I still have this. ${facts[0]}.`,
-          timestamp: "Just now",
-        }];
+        next = [...next, { id: `first_${Date.now()}`, sender: "companion", text: `Before you say anything: I still have this. ${facts[0]}.`, timestamp: "Just now" }];
       }
       setMessages(next);
+      setHistoryCompanionId(id);
     }
-    loadMemory();
-  }, [selectedGirl]);
+    void loadMemory();
+    return () => { cancelled = true; };
+  }, [selectedGirl.id]);
 
-  // Persist messages to IndexedDB & localStorage
   useEffect(() => {
-    if (messages.length > 0) {
-      saveCompanionMemory(selectedGirl.id, messages);
-      try {
-        localStorage.setItem(`chat_mem_${selectedGirl.id}`, JSON.stringify(messages));
-      } catch (e) {}
-      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, selectedGirl]);
+    if (historyCompanionId !== selectedGirl.id || !messages.length) return;
+    void saveCompanionMemory(historyCompanionId, messages);
+    try { localStorage.setItem(`chat_mem_${historyCompanionId}`, JSON.stringify(messages)); }
+    catch { setNotice("Device storage is full. Export your chats from Settings before clearing space."); }
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, historyCompanionId, selectedGirl.id]);
 
   // Voice Speech Synthesis
   const playVoice = (phrase: string) => {
@@ -442,14 +437,16 @@ export default function Home() {
       const u = new SpeechSynthesisUtterance(phrase);
       u.pitch = selectedGirl.voice?.pitch ?? 1.15;
       u.rate = selectedGirl.voice?.rate ?? 0.95;
+      u.onerror = (event) => { if (event.error !== "interrupted" && event.error !== "canceled") setNotice("Voice could not start. Check your device audio settings and try Speak again."); };
       window.speechSynthesis.speak(u);
-    }
+    } else setNotice("Speech playback is not supported in this browser.");
   };
 
   // Send Text Message
   const handleSend = async (overrideText?: string) => {
     const text = (overrideText || inputText).trim();
-    if (!text || isTyping) return;
+    if (!text || isTyping || historyCompanionId !== selectedGirl.id) return;
+    const requestCompanionId = selectedGirl.id;
 
     const userMsg: Message = {
       id: `u_${Date.now()}`,
@@ -486,17 +483,25 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companionId: selectedGirl.id,
+          companionName: selectedGirl.name,
           message: text,
           intimacyLevel: selectedGirl.intimacy,
           memories: memory,
           backstory,
-          conversationHistory: history.slice(-8).map((item) => ({
+          conversationHistory: messages.slice(-8).map((item) => ({
             sender: item.sender === "user" ? "user" : "companion",
             text: item.text,
           })),
         }),
       });
       const data = await res.json().catch(() => ({}));
+      if (selectedIdRef.current !== requestCompanionId) return;
+      if (!res.ok || data.source !== "external-ai") {
+        setNotice(typeof data.error === "string" ? data.error : "Live AI is unavailable. You can switch to local chat.");
+        setMessages(previous => previous.filter(item => item.id !== userMsg.id));
+        setInputText(text);
+        return;
+      }
       const reply =
         typeof data.reply === "string" && data.reply.trim()
           ? data.reply.trim()
@@ -507,13 +512,12 @@ export default function Home() {
       ]);
       playVoice(reply.replace(/\*.*?\*/g, ""));
     } catch {
-      const reply = "The line went quiet. Try once more.";
-      setMessages((prev) => [
-        ...prev,
-        { id: `c_${Date.now()}`, sender: "companion", text: reply, timestamp: "Just now" },
-      ]);
+      if (selectedIdRef.current !== requestCompanionId) return;
+      setNotice("The AI connection failed. Check your connection and try Send again.");
+      setMessages(previous => previous.filter(item => item.id !== userMsg.id));
+      setInputText(text);
     } finally {
-      setIsTyping(false);
+      if (selectedIdRef.current === requestCompanionId) setIsTyping(false);
     }
   };
 
@@ -551,43 +555,26 @@ export default function Home() {
     }
   };
 
-  // User Uploads Photo from Their Gallery into Chat
+  // Store an uploaded image as durable data, rather than a temporary blob URL.
   const handleUserGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const localUrl = URL.createObjectURL(file);
-
-      const userPhotoMsg: Message = {
-        id: `u_photo_${Date.now()}`,
-        sender: "user",
-        text: "Sent a photo from gallery 📷",
-        type: "user_photo",
-        mediaUrl: localUrl,
-        timestamp: "Just now"
-      };
-
-      setMessages(prev => [...prev, userPhotoMsg]);
-      setIsTyping(true);
-
-      // AI Companion Vision Reaction to User's Picture
-      setTimeout(() => {
-        setIsTyping(false);
-        const visionReplies = [
-          `*eyes light up looking at your photo* Wow handsome, you look absolutely stunning! I'm saving this right to my private vault.`,
-          `*gasps softly* Oh I love this photo of you! Seeing you just made my whole day ten times better.`,
-          `*smiles affectionately* You have such great style. Send me photos like this all the time!`
-        ];
-        const reply = visionReplies[Math.floor(Math.random() * visionReplies.length)];
-        const compMsg: Message = {
-          id: `c_vision_${Date.now()}`,
-          sender: "companion",
-          text: reply,
-          timestamp: "Just now"
-        };
-        setMessages(prev => [...prev, compMsg]);
-        playVoice("Wow handsome, you look absolutely stunning! I'm saving this to my private vault.");
-      }, 1600);
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 2 * 1024 * 1024) {
+      setNotice("Choose an image smaller than 2 MB."); return;
     }
+    const id = selectedGirl.id;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (selectedIdRef.current !== id || typeof reader.result !== "string") return;
+      setMessages(previous => [...previous, {
+        id: `photo_${Date.now()}`, sender: "user", text: "Photo saved on this device.",
+        type: "user_photo", mediaUrl: reader.result as string, timestamp: "Just now",
+      }]);
+      setNotice("Photo saved in this chat. Image analysis is not connected.");
+    };
+    reader.onerror = () => setNotice("This photo could not be read. Try another image.");
+    reader.readAsDataURL(file);
   };
 
   // Import Character Card (Character.ai, TavernAI, Chub, or Viral Templates)
@@ -606,37 +593,23 @@ export default function Home() {
       intimacy: imported.intimacy || 70,
       vaultPhotos: imported.vaultPhotos || [imported.avatar]
     };
-    setCompanions(prev => [newComp, ...prev]);
+    setCompanions(prev => {
+      const next = [newComp, ...prev.filter(item => item.id !== newComp.id)];
+      localStorage.setItem("velvet_companions", JSON.stringify(next.filter(item => !defaultCompanions.some(original => original.id === item.id))));
+      return next;
+    });
     setSelectedGirl(newComp);
     setActiveTab("chats");
     setShowImporterModal(false);
   };
 
-  // Companion Sends In-Chat Selfie
   const handleRequestSelfie = () => {
-    const reqMsg: Message = {
-      id: `u_req_${Date.now()}`,
-      sender: "user",
-      text: "Send me a private selfie?",
-      timestamp: "Just now"
-    };
-    setMessages(prev => [...prev, reqMsg]);
-    setIsTyping(true);
-
-    setTimeout(() => {
-      setIsTyping(false);
-      const randomPhoto = selectedGirl.vaultPhotos[Math.floor(Math.random() * selectedGirl.vaultPhotos.length)];
-      const photoMsg: Message = {
-        id: `c_selfie_${Date.now()}`,
-        sender: "companion",
-        text: `*snaps a quick photo for you* Here you go, handsome! Do you like how I look today?`,
-        type: "selfie",
-        mediaUrl: randomPhoto,
-        timestamp: "Just now"
-      };
-      setMessages(prev => [...prev, photoMsg]);
-      playVoice("Here you go, handsome! Do you like how I look today?");
-    }, 1600);
+    if (historyCompanionId !== selectedGirl.id) return;
+    const photo = selectedGirl.vaultPhotos[0] || selectedGirl.avatar;
+    setMessages(previous => [...previous, {
+      id: `portrait_${Date.now()}`, sender: "companion", text: "Here is my saved portrait.",
+      type: "selfie", mediaUrl: photo, timestamp: "Just now",
+    }]);
   };
 
   // Request Video Motion
@@ -683,6 +656,7 @@ export default function Home() {
 
   return (
     <div className="h-dvh w-screen bg-[#07060A] text-white flex flex-col overflow-hidden relative font-sans">
+      {notice && <div role="status" className="shrink-0 flex items-center justify-between gap-3 border-b border-white/10 bg-[#181321] px-4 py-2 text-xs text-zinc-200"><span>{notice}</span><button type="button" onClick={() => setNotice("")} aria-label="Dismiss notice">Dismiss</button></div>}
       {/* Automated Tab & Push Notification Re-Engagement Engine */}
       <ReengagementEngine activeCompanionName={selectedGirl?.name || "Chloe"} />
       
@@ -1056,13 +1030,14 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => {
+                  if (!liveAvailable) { setNotice("Live AI is not connected. Free chat uses local replies and saved facts."); return; }
                   const next = !liveModel;
                   setLiveModel(next);
                   localStorage.setItem("velvet_live_model", next ? "1" : "0");
                 }}
                 className={`px-3.5 py-1.5 rounded-full border text-xs font-bold ${liveModel ? "border-amber-400 text-amber-200" : "border-emerald-500/40 text-emerald-300"}`}
               >
-                {liveModel ? "Live model on" : "Free"}
+                {liveModel ? "Live model on" : liveAvailable ? "Enable live AI" : "Live AI not connected"}
               </button>
               <button
                 type="button"
@@ -1116,6 +1091,7 @@ export default function Home() {
                   >
                     {m.text}
                   </div>
+                  {!isUser && <button type="button" onClick={() => playVoice(m.text)} className="mt-1 text-xs text-zinc-400">Speak</button>}
                   </div>
                 </div>
               );
@@ -1137,6 +1113,7 @@ export default function Home() {
               onSpeak={playVoice}
               onOpenStudio={() => setActiveTab("stories")}
             />
+            <button type="button" onClick={handleRequestSelfie} disabled={isTyping || historyCompanionId !== selectedGirl.id} className="mb-2 rounded-full border border-white/10 px-3 py-1.5 text-xs text-zinc-300">Send saved portrait</button>
             <div className="flex items-center gap-2">
               <input
                 ref={galleryInputRef}
@@ -1156,6 +1133,7 @@ export default function Home() {
                 type="text"
                 placeholder={`Message ${selectedGirl.name}`}
                 value={inputText}
+                disabled={historyCompanionId !== selectedGirl.id}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 className="h-12 min-w-0 flex-1 rounded-full border border-white/10 bg-white/5 px-4 text-sm text-white outline-none focus:border-white/30"
@@ -1163,6 +1141,7 @@ export default function Home() {
               <button
                 onClick={() => handleSend()}
                 className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-black"
+                disabled={isTyping || historyCompanionId !== selectedGirl.id || !inputText.trim()}
                 aria-label="Send"
               >
                 <Send className="h-4 w-4" />
@@ -1178,6 +1157,7 @@ export default function Home() {
         )}
         {showRightDrawer && activeTab === "chats" && (
           <aside className="fixed inset-y-0 right-0 z-40 flex w-[min(100%,22rem)] flex-col gap-4 overflow-y-auto border-l border-white/10 bg-[#0E0C15] p-5 lg:static lg:z-0 lg:flex lg:shrink-0">
+            <button type="button" onClick={() => setShowRightDrawer(false)} className="self-end rounded-xl border border-white/10 px-3 py-2 text-xs">Close details</button>
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl bg-black">
               <img src={selectedGirl.avatar} alt="" className="h-full w-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black to-transparent p-4">
@@ -1341,7 +1321,16 @@ export default function Home() {
         onClose={() => setShowPermissionsModal(false)}
         currentMemories={{ messages, companion: selectedGirl }}
         onImportMemories={(data) => {
-          if (data && data.messages) setMessages(data.messages);
+          if (!data || !Array.isArray(data.messages) || !data.messages.every(validMessage)) throw new Error("Invalid chat backup");
+          const companion = data.companion;
+          if (companion && typeof companion.id === "string" && companion.id !== selectedGirl.id) {
+            localStorage.setItem(`chat_mem_${companion.id}`, JSON.stringify(data.messages));
+            void saveCompanionMemory(companion.id, data.messages);
+            const found = companions.find(item => item.id === companion.id);
+            if (found) setSelectedGirl(found);
+            else setNotice("Chat imported. Import its companion card to open it.");
+          } else setMessages(data.messages);
+          setActiveTab("chats");
         }}
       />
 
