@@ -17,6 +17,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Story engine stays consistent
+        run: npm test
       - name: The app still builds
         run: npm run build
       - name: Portraits still match the app
