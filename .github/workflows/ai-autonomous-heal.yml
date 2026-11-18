@@ -52,18 +52,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          BODY="### 🛡️ AI Self-Healing Autonomous Pull Request
+
+          This PR was triggered by telemetry from VelvetMotion Autonomous Guardian.
+
+          - **Source Issue:** #${{ github.event.issue.number }}
+          - **Trigger:** Sentry / Telemetry runtime report
+          - **Pipeline Stage:** \`[AI Pull Request] ➔ [Vercel Auto-Deploy]\`
+          - **Build Status:** Verified \`npm run build\` successfully
+
+          Closes #${{ github.event.issue.number }}"
           gh pr create \
             --title "🤖 Autonomous Fix for #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" \
-            --body "### 🛡️ AI Self-Healing Autonomous Pull Request
-
-This PR was triggered by telemetry from VelvetMotion Autonomous Guardian.
-
-- **Source Issue:** #${{ github.event.issue.number }}
-- **Trigger:** Sentry / Telemetry runtime report
-- **Pipeline Stage:** \`[AI Pull Request] ➔ [Vercel Auto-Deploy]\`
-- **Build Status:** Verified \`npm run build\` successfully
-
-Closes #${{ github.event.issue.number }}" \
+            --body "$BODY" \
             --head "${{ steps.create_patch.outputs.branch_name }}" \
             --base "main" || echo "PR already created or handled."
 
