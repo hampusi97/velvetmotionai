@@ -17,13 +17,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
           cache: 'npm'
 
       - name: Run Integrity Verification & Auto-Fix
         run: |
-          npm install --prefer-offline
-          npm audit fix --force || echo "Audit complete"
+          npm ci || npm install --prefer-offline
           npm run build
 
       - name: Self-Healing Maintenance Commit
@@ -32,6 +31,7 @@ jobs:
           git config --global user.email "guardian@velvetmotion.internal"
           mkdir -p .github/ai-controller
           echo "- Health check passed and verified at $(date -u)" >> .github/ai-controller/guardian-log.txt
-          git add .
+          git add .github/ai-controller/guardian-log.txt
           git commit -m "Autonomous Guardian: Integrity check, dependency auto-fix, and build verification" || echo "Clean"
+          git pull --rebase origin main
           git push origin main
